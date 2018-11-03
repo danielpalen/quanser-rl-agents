@@ -1,1 +1,2 @@
-# rl-research-lab-class
+# Application of Reinforcement Learning Methods
+
