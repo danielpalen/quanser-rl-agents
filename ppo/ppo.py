@@ -1,3 +1,5 @@
+import sys
+
 import argparse
 import numpy as np
 
@@ -5,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical, Normal
+from torch.distributions import Categorical, Normal, MultivariateNormal
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 import gym
@@ -17,11 +19,12 @@ class PolicyNetwork(nn.Module):
         super(PolicyNetwork, self).__init__()
         self.observation_space = env.observation_space
         self.action_space = env.action_space
+        self.num_actions = self.action_space.shape[0]
         self.action_scaling = torch.tensor(self.action_space.high, dtype=torch.float32)
 
         self.h1 = nn.Linear(self.observation_space.shape[0], 100)
-        self.action_mu  = nn.Linear(100, 1)
-        self.action_sig = nn.Linear(100, 1)
+        self.action_mu  = nn.Linear(100, self.num_actions)
+        self.action_sig = nn.Linear(100, self.num_actions)
 
     def forward(self, state):
         x = F.relu(self.h1(state))
@@ -33,10 +36,14 @@ class PolicyNetwork(nn.Module):
         state = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
             μ, σ = self.forward(state)
-        a_dist = Normal(μ, σ)
-        action = a_dist.sample()
+            Σ = torch.stack([σ_*torch.eye(self.num_actions) for σ_ in σ])
+        #print('μ', μ, 'σ', σ, 'Σ', Σ)
+
+        a_dist = MultivariateNormal(μ, Σ)
+        action = a_dist.sample().squeeze(0)
         log_prob = a_dist.log_prob(action)
-        return action.item(), log_prob.item()
+        # print('action', action, 'log_p', log_prob)
+        return action.numpy(), log_prob.numpy()
 
 
 class ValueNetwork(nn.Module):
@@ -73,10 +80,10 @@ training = not args.eval
 
 
 
-env = gym.make('Pendulum-v0')
+# env = gym.make('Pendulum-v0')
 # env = gym.make('DoublePendulum-v0') # DoubleCartPole
 # env = gym.make('Qube-v0')  # FurutaPend
-# env = gym.make('BallBalancerSim-v0')  # BallBalancer
+env = gym.make('BallBalancerSim-v0')  # BallBalancer
 print('Env:', env)
 print('Reward range', env.reward_range)
 print('Observation space:', env.observation_space)
@@ -91,9 +98,9 @@ print('  ', env.action_space.low)
 
 model   = PolicyNetwork(env).float()
 model_v = ValueNetwork(env).float()
-optimizer   = optim.Adam(model.parameters(), lr=1e-4)
-optimizer_v = optim.Adam(model_v.parameters(), lr=3e-4)
-epoch = -1
+optimizer   = optim.Adam(model.parameters(), lr=3e-4)
+optimizer_v = optim.Adam(model_v.parameters(), lr=6e-4)
+epoch = 0
 
 if args.eval or args.resume:
     checkpoint = torch.load('out/ppo_checkpoint.pt')
@@ -115,7 +122,8 @@ else:
 
 while epoch < 100000:
     epoch += 1
-    state = env.reset()
+    # state = env.reset() # TODO:
+    state,_ = env.reset() # Necessary for the BallBalance environment.
     states, next_states, actions, log_probs, rewards, values, dones = [],[],[],[],[],[],[]
 
     traj_length = 0
@@ -125,8 +133,15 @@ while epoch < 100000:
     n_steps = 1000
     for step in range(n_steps):
 
+        # print('state', state)
+
         action, log_prob = model.select_action(state)
-        state_, reward, done, _ = env.step(np.array([action]))
+        state_, reward, done, _ = env.step(action)
+
+        # print('action', action)
+        # print('log_prob', log_prob)
+
+        #sys.exit()
 
         # since rendering is expensive only render sometimes
         if args.render:
@@ -145,7 +160,8 @@ while epoch < 100000:
         state = state_
 
         if done:
-            state = env.reset()
+            # state = env.reset() # TODO:
+            state,_ = env.reset() # Necessary for the BallBalance environment. 
             traj_lengths.append(traj_length)
             traj_length = 0
 
@@ -171,7 +187,7 @@ while epoch < 100000:
     batch_size = 128
 
     states = torch.tensor(states, dtype=torch.float32)
-    actions = torch.tensor(actions, dtype=torch.float32).view(-1,1)
+    actions = torch.tensor(actions, dtype=torch.float32).view(-1,env.action_space.shape[0])
     next_states = torch.tensor(next_states, dtype=torch.float32)
     old_log_probs = torch.tensor(log_probs, dtype=torch.float32).view(-1,1)
     rewards = torch.tensor(rewards, dtype=torch.float32).view(-1,1)
@@ -204,6 +220,8 @@ while epoch < 100000:
                 mb_old_log_probs = old_log_probs[index]
                 mb_returns = returns[index]
                 mb_advs = advs[index]
+
+                #print('mb_actions', mb_actions.size())
 
                 μ, σ = model(mb_states)
                 a_dist = Normal(μ, σ)
