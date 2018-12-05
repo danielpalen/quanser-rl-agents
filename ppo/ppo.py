@@ -98,8 +98,8 @@ print('  ', env.action_space.low)
 
 model   = PolicyNetwork(env).float()
 model_v = ValueNetwork(env).float()
-optimizer   = optim.Adam(model.parameters(), lr=3e-4)
-optimizer_v = optim.Adam(model_v.parameters(), lr=6e-4)
+optimizer   = optim.Adam(model.parameters(), lr=3e-5)
+optimizer_v = optim.Adam(model_v.parameters(), lr=6e-5)
 epoch = 0
 
 if args.eval or args.resume:
@@ -122,8 +122,7 @@ else:
 
 while epoch < 100000:
     epoch += 1
-    # state = env.reset() # TODO:
-    state,_ = env.reset() # Necessary for the BallBalance environment.
+    state = env.reset()
     states, next_states, actions, log_probs, rewards, values, dones = [],[],[],[],[],[],[]
 
     traj_length = 0
@@ -160,8 +159,7 @@ while epoch < 100000:
         state = state_
 
         if done:
-            # state = env.reset() # TODO:
-            state,_ = env.reset() # Necessary for the BallBalance environment. 
+            state = env.reset()
             traj_lengths.append(traj_length)
             traj_length = 0
 
