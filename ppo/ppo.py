@@ -69,9 +69,19 @@ class ValueNetwork(nn.Module):
 
 
 parser = argparse.ArgumentParser(description='Solve the different gym envs with PPO')
+parser.add_argument('experiment_id', type=str, help='identifier to store experiment results')
+parser.add_argument('--env', type=str, default='pendulum', help="name of the gym environment to be used for training [pendulum, double_pendulum, furuta, balancer]")
 parser.add_argument('--eval', action='store_true', help='toggles evaluation mode')
 parser.add_argument('--render', action='store_true', help='render the environment')
 parser.add_argument('--resume', action='store_true', help='resume training on an existing model by loading the last checkpoint')
+parser.add_argument('--n_steps', type=int, default=3000, help='number of agent steps when collecting trajectories for one epoch')
+
+parser.add_argument('--p_lr', type=float, default=7e-4, help='initial learning rate policy network')
+parser.add_argument('--v_lr', type=float, default=7e-4, help='initial learning rate value network')
+
+parser.add_argument('--ppo_batch_size', type=int, default=128, help='PPO mini batch size')
+parser.add_argument('--n_ppo_epochs', type=int, default=10, help='number of epochs of PPO optimization')
+
 args = parser.parse_args()
 
 torch.set_printoptions(threshold=5000)
@@ -79,11 +89,18 @@ torch.set_printoptions(threshold=5000)
 training = not args.eval
 
 
+environments = {
+    'balancer'        : 'BallBalancerSim-v0',
+    'double_pendulum' : 'DoublePendulum-v0',
+    'furuta'          : 'Qube-v0',
+    'pendulum'        : 'Pendulum-v0',
+}
 
-# env = gym.make('Pendulum-v0')
+
+env = gym.make(environments[args.env])
 # env = gym.make('DoublePendulum-v0') # DoubleCartPole
 # env = gym.make('Qube-v0')  # FurutaPend
-env = gym.make('BallBalancerSim-v0')  # BallBalancer
+# env = gym.make('BallBalancerSim-v0')  # BallBalancer
 print('Env:', env)
 print('Reward range', env.reward_range)
 print('Observation space:', env.observation_space)
@@ -93,14 +110,17 @@ print('Action space:', env.action_space)
 print('  ', env.action_space.high)
 print('  ', env.action_space.low)
 
+print('p_lr', args.p_lr, 'v_lr', args.v_lr)
+
 # torch.manual_seed(0)
 # env.seed(0)
 
 model   = PolicyNetwork(env).float()
 model_v = ValueNetwork(env).float()
-optimizer   = optim.Adam(model.parameters(), lr=3e-5)
-optimizer_v = optim.Adam(model_v.parameters(), lr=6e-5)
+optimizer   = optim.Adam(model.parameters(), lr=args.p_lr) # 3e-3
+optimizer_v = optim.Adam(model_v.parameters(), lr=args.v_lr) # 6e-3
 epoch = 0
+n_steps = args.n_steps
 
 if args.eval or args.resume:
     checkpoint = torch.load('out/ppo_checkpoint.pt')
@@ -129,7 +149,6 @@ while epoch < 100000:
     traj_lengths = []
 
     # Sample trajectories
-    n_steps = 1000
     for step in range(n_steps):
 
         # print('state', state)
@@ -181,8 +200,8 @@ while epoch < 100000:
     #################
 
     γ = 0.9
-    num_ppo_epochs = 10
-    batch_size = 128
+    #n_ppo_epochs = 10
+    #batch_size = 128
 
     states = torch.tensor(states, dtype=torch.float32)
     actions = torch.tensor(actions, dtype=torch.float32).view(-1,env.action_space.shape[0])
@@ -209,8 +228,8 @@ while epoch < 100000:
     policy_losses, value_losses = [], []
 
     if training:
-        for _ in range(num_ppo_epochs):
-            for index in BatchSampler(SubsetRandomSampler(range(n_steps)), batch_size, False):
+        for _ in range(args.n_ppo_epochs):
+            for index in BatchSampler(SubsetRandomSampler(range(n_steps)), args.ppo_batch_size, False):
 
                 # Construct the mini batch
                 mb_states = states[index]
