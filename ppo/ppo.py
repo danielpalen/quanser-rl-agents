@@ -241,9 +241,29 @@ while epoch < 100000:
                 #print('mb_actions', mb_actions.size())
 
                 μ, σ = model(mb_states)
-                a_dist = Normal(μ, σ)
-                mb_log_probs = a_dist.log_prob(mb_actions)
+                Σ = torch.stack([σ_*torch.eye(env.action_space.shape[0]) for σ_ in σ])
+
+                a_dist = MultivariateNormal(μ, Σ)
+
+                # print('μ', μ)
+                # print('σ', σ.mean(), end="\r")
+                # print('Σ', Σ)
+                # print()
+
+                mb_log_probs = a_dist.log_prob(mb_actions).unsqueeze(-1)
+                #print('mb_actions', mb_actions)
+                #print('mb_log_probs', mb_log_probs.size())
+                #print('mb_old_log_probs', mb_old_log_probs.size())
                 ratio = torch.exp(mb_log_probs - mb_old_log_probs)
+                #print('ratio', ratio.size())
+
+                # print('mb_states', mb_states.size())
+                # print('mb_actions', mb_actions.size())
+                # print('mb_log_probs', mb_log_probs.size())
+                # print('mb_old_log_probs', mb_old_log_probs.size())
+                # print('mb_returns', mb_returns.size())
+                # print('mb_advs', mb_advs.size())
+                # print()
 
                 optimizer.zero_grad()
                 surr1 = ratio * mb_advs
