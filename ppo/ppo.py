@@ -38,7 +38,7 @@ class PolicyNetwork(nn.Module):
             μ, σ = self.forward(state)
             Σ = torch.stack([σ_*torch.eye(self.num_actions) for σ_ in σ])
         #print('μ', μ, 'σ', σ, 'Σ', Σ)
-
+        #print('Σ', Σ)
         a_dist = MultivariateNormal(μ, Σ)
         action = a_dist.sample().squeeze(0)
         log_prob = a_dist.log_prob(action)
@@ -51,14 +51,14 @@ class ValueNetwork(nn.Module):
     def __init__(self, env):
         super(ValueNetwork, self).__init__()
         self.observation_space = env.observation_space
-        self.action_space = env.action_space
 
         self.h1 = nn.Linear(self.observation_space.shape[0], 100)
         self.value = nn.Linear(100, 1)
 
     def forward(self, state):
         #x = torch.from_numpy(state).float().unsqueeze(0)
-        x = F.relu(self.h1(state))
+        # x = F.relu(self.h1(state))
+        x = torch.tanh(self.h1(state))
         value = self.value(x)
         return value
 
@@ -74,6 +74,8 @@ parser.add_argument('--env', type=str, default='pendulum', help="name of the gym
 parser.add_argument('--eval', action='store_true', help='toggles evaluation mode')
 parser.add_argument('--render', action='store_true', help='render the environment')
 parser.add_argument('--resume', action='store_true', help='resume training on an existing model by loading the last checkpoint')
+
+parser.add_argument('--gamma', type=float, default=0.9, help='discount factor')
 parser.add_argument('--n_steps', type=int, default=3000, help='number of agent steps when collecting trajectories for one epoch')
 
 parser.add_argument('--p_lr', type=float, default=7e-4, help='initial learning rate policy network')
@@ -145,23 +147,12 @@ while epoch < 100000:
     state = env.reset()
     states, next_states, actions, log_probs, rewards, values, dones = [],[],[],[],[],[],[]
 
-    traj_length = 0
-    traj_lengths = []
-
     # Sample trajectories
     for step in range(n_steps):
-
-        # print('state', state)
 
         action, log_prob = model.select_action(state)
         state_, reward, done, _ = env.step(action)
 
-        # print('action', action)
-        # print('log_prob', log_prob)
-
-        #sys.exit()
-
-        # since rendering is expensive only render sometimes
         if args.render:
             env.render()
 
@@ -170,19 +161,12 @@ while epoch < 100000:
         actions.append(action)
         log_probs.append(log_prob)
         rewards.append(reward)
-        # values.append(value)
-
         dones.append(done)
-
-        traj_length += 1
-        state = state_
 
         if done:
             state = env.reset()
-            traj_lengths.append(traj_length)
-            traj_length = 0
-
-    traj_lengths.append(traj_length)
+        else:
+            state = state_
 
     # print()
     # print('states', states)
@@ -194,36 +178,58 @@ while epoch < 100000:
     # print('dones', dones)
     # print()
 
-    # calculate returns
     #################
     # Update Policy #
     #################
 
-    γ = 0.9
-    #n_ppo_epochs = 10
-    #batch_size = 128
+    γ = args.gamma
 
     states = torch.tensor(states, dtype=torch.float32)
     actions = torch.tensor(actions, dtype=torch.float32).view(-1,env.action_space.shape[0])
     next_states = torch.tensor(next_states, dtype=torch.float32)
     old_log_probs = torch.tensor(log_probs, dtype=torch.float32).view(-1,1)
     rewards = torch.tensor(rewards, dtype=torch.float32).view(-1,1)
+    dones = torch.tensor(dones, dtype=torch.float32).view(-1,1)
     normalized_rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
 
-    # REVIEW: use 1-step GAE vs. discounted rewards for return calculation.
+    ##############################
+    # Return calculation         #
+    # ############################
 
+    # - Monte Carlo --------------
     # R = model_v.get_value(state)
     # returns = []
     # for t in reversed(range(n_steps)):
-    #     R = normalized_rewards[t] + (1-dones[t]) * γ * R
+    #     # R = normalized_rewards[t] + (1-dones[t]) * γ * R
+    #     R = rewards[t] + (1-dones[t]) * γ * R
     #     returns.insert(0,R)
     # returns = torch.tensor(returns, dtype=torch.float32).view(-1,1)
 
+    # - Temporal Difference ------
     with torch.no_grad():
-        returns = normalized_rewards + γ * model_v(next_states)
-        # returns = rewards + γ * model_v(next_states)
-        # returns = (returns - returns.mean()) / (returns.std() + 1e-5)
-        advs = returns - model_v(states)
+        # returns = normalized_rewards + γ * model_v(next_states)
+        returns = rewards + γ * model_v(next_states)
+
+
+    ##############################
+    # Advantage Calculation      #
+    # ############################
+
+    # - GAE ----------------------
+    with torch.no_grad():
+        λ = 0.99
+        A_GAE = 0.0
+        advs = []
+        δ = rewards + γ * model_v(next_states) - model_v(states)
+        for t in reversed(range(n_steps)):
+            A_GAE = δ[t] + λ * γ * A_GAE * (1-dones[t])
+            advs.insert(0,A_GAE)
+        advs = torch.tensor(advs).view(-1,1)
+
+    # - Temporal Difference ------
+    # with torch.no_grad():
+    #     advs = returns - model_v(states)
+
 
     policy_losses, value_losses = [], []
 
@@ -291,5 +297,5 @@ while epoch < 100000:
         }
         torch.save(model_states, './out/ppo_checkpoint.pt')
 
-    if epoch%10==0:
-        print(f"{epoch:4} rewards {rewards.sum().item():10.2f} | policy {np.mean(policy_losses):12.3f} | value {np.mean(value_losses):12.3f}")
+    # if epoch%10==0:
+    print(f"{epoch:4} rewards {rewards.sum().item():10.2f} | policy {np.mean(policy_losses):12.3f} | value {np.mean(value_losses):12.3f}")
