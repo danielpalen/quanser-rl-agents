@@ -125,7 +125,7 @@ epoch = 0
 n_steps = args.n_steps
 
 if args.eval or args.resume:
-    checkpoint = torch.load('out/ppo_checkpoint.pt')
+    checkpoint = torch.load(f"./out/models/{args.experiment_id}.pt")
     model.load_state_dict(checkpoint['model_state_dict'])
     model_v.load_state_dict(checkpoint['model_v_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -295,7 +295,7 @@ while epoch < 100000:
             'model_v_state_dict': model_v.state_dict(),
             'optimizer_v_state_dict': optimizer_v.state_dict(),
         }
-        torch.save(model_states, './out/ppo_checkpoint.pt')
+        torch.save(model_states, f"./out/models/{args.experiment_id}.pt")
 
     # if epoch%10==0:
     print(f"{epoch:4} rewards {rewards.sum().item():10.2f} | policy {np.mean(policy_losses):12.3f} | value {np.mean(value_losses):12.3f}")
