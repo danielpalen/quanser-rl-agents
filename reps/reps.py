@@ -209,7 +209,6 @@ while epoch < 1000:
 
     start_fit_new_policy = time.time()
 
-    φ_0 = np.mean(state_0, axis=-1)
     δ = np.array([(r + α.dot( γ*φ_s_ - φ_s + (1-γ)*φ_0 )) for r, φ_s, φ_s_ in zip(rewards, states, next_states)])
     # δ = np.array([(r + α.dot( φ_s_ - φ_s )) for r, φ_s, φ_s_ in zip(rewards, states, next_states)])
     ω = np.expand_dims(np.exp(δ / η), axis=-1)
