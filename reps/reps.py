@@ -1,7 +1,10 @@
 import argparse
 
+import torch
 import numpy as np
 from scipy.optimize import minimize
+
+from tensorboardX import SummaryWriter
 
 import gym
 import quanser_robots
@@ -16,6 +19,7 @@ parser.add_argument('--resume', action='store_true', help='resume training on an
 parser.add_argument('--n_steps', type=int, default=3000, help='number of agent steps when collecting trajectories for one epoch')
 
 args = parser.parse_args()
+writer = SummaryWriter(log_dir=f"./out/summary/{args.experiment_id}")
 
 training = not args.eval
 
@@ -145,6 +149,12 @@ while epoch < 100:
         Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
 
         σ = np.sqrt(np.sum(W @ np.square(ã - Φ @ θ)) / Z)
+
+        writer.add_scalar('rl/reward', torch.tensor(np.mean(rewards)), epoch)
+        writer.add_scalar('rl/η',  torch.tensor(η), epoch)
+        # writer.add_scalar('rl/α',  torch.tensor(α), epoch)
+        writer.add_scalar('rl/KL', torch.tensor(KL), epoch)
+        writer.add_scalar('rl/σ', torch.tensor(σ), epoch)
 
         np.savez(f"./out/models/{args.experiment_id}.npz", θ=θ, α=α, η=η, σ=σ,
                  fourier_feats=fourier_feature_parameters, epoch=epoch)
