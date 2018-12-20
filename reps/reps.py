@@ -1,4 +1,5 @@
 import sys
+import time
 
 from pprint import pprint
 
@@ -75,7 +76,7 @@ def φ(s):
 
 # Policy parameters θ
 θ = np.random.randn(n_fourier_features, env.action_space.shape[0])
-σ = 0.5
+σ = 16.0
 α = np.random.randn(n_fourier_features)
 η = np.random.rand()
 ε = 0.1
@@ -102,6 +103,7 @@ while epoch < 1000:
     states, states_0, next_states, actions, old_probs, rewards, values, dones = [],[],[],[],[],[],[],[]
 
     # Sample trajectories
+    start_sampling = time.time()
     for step in range(n_steps):
 
         μ = φ(state).T @ θ
@@ -120,7 +122,7 @@ while epoch < 1000:
             env.render()
 
         states.append(φ(state))
-        states_0.append(state_0)
+        # states_0.append(state_0)
         actions.append(action.numpy())
         rewards.append(reward)
         next_states.append(φ(state_))
@@ -133,6 +135,7 @@ while epoch < 1000:
             # print('reset')
             state = env.reset()
             state_0 = φ(state)
+            states_0.append(state_0)
         else:
             state = state_
 
@@ -140,7 +143,8 @@ while epoch < 1000:
         #     state = env.reset()
         # else:
         #     state = state_
-
+    end_sampling = time.time()
+    # print('sampling', end_sampling-start_sampling)
 
     # print('actions', actions)
     #print('old_probs', old_probs)
@@ -152,13 +156,36 @@ while epoch < 1000:
     #                          #
     ############################
 
+    start_dual_optim = time.time()
+
+    R     = np.array(rewards)
+    φ_s   = np.array(states)
+    φ_s_  = np.array(next_states)
+    φ_0   = np.expand_dims(np.mean(states_0, axis=0), axis=0)
+
+    # print('rewards', np.array(rewards).shape)
+    # print('states', np.array(states).shape)
+    # print('next_states', np.array(next_states).shape)
+    # print('states_0', np.array(states_0).shape)
+    # print('φ_0', φ_0.shape)
+    # print('α', α.shape)
+
+
+
+    Φ = γ*φ_s_ - φ_s + (1-γ)*φ_0
+    #print('δ', (R + α.dot(Φ.T)).shape)
+    #print('Φ', Φ.shape)
+
     def dual(params):
         """dual formulation for of the REPS objective function"""
         η,α = params[0], params[1:]
-        φ_0 = np.mean(state_0, axis=-1)
-        δ = np.array([(r + α.dot( γ*φ_s_ - φ_s + (1-γ)*φ_0 ))
-                      for r, φ_s_, φ_s in zip(rewards, next_states, states)])
-        return η*ε + np.max(δ) + η * np.log(np.mean(np.exp((δ-np.max(δ))/η)))
+
+        #δ = np.array([(r + α.dot( γ*φ_s_ - φ_s + (1-γ)*φ_0 )) for r, φ_s_, φ_s in zip(rewards, next_states, states)])
+        δ = R + α.dot(Φ.T)
+        #print('δ', δ.shape)
+        # δ = np.array([(r + α.dot( φ_s_ - φ_s ))
+        #               for r, φ_s_, φ_s in zip(rewards, next_states, states)])
+        return η*ε + np.max(δ) + η * np.log(np.mean(np.exp((δ-np.max(δ))/η))) + 1e-6 * np.linalg.norm(α,2)
 
     # print('inital dual value', dual(np.concatenate([np.array([η]),α])))
 
@@ -167,10 +194,12 @@ while epoch < 1000:
     res = minimize(dual, params, method='SLSQP', bounds=bounds)
     η,α = res.x[0], res.x[1:]
 
-    params = np.concatenate([np.array([η]),α])
+    #params = np.concatenate([np.array([η]),α])
     # print('final dual value', dual(params))
-    # print('η', η, ' α', α)
+    print('η', η, 'α', α)
 
+    end_dual_optim = time.time()
+    # print('dual_optim', end_dual_optim-start_dual_optim)
 
     ############################
     #                          #
@@ -178,44 +207,50 @@ while epoch < 1000:
     #                          #
     ############################
 
+    start_fit_new_policy = time.time()
+
     φ_0 = np.mean(state_0, axis=-1)
     δ = np.array([(r + α.dot( γ*φ_s_ - φ_s + (1-γ)*φ_0 )) for r, φ_s, φ_s_ in zip(rewards, states, next_states)])
-    w = np.expand_dims(np.exp(δ / η), axis=-1)
-    # print('w_', np.mean(w))
-    w = w / np.mean(w)
+    # δ = np.array([(r + α.dot( φ_s_ - φ_s )) for r, φ_s, φ_s_ in zip(rewards, states, next_states)])
+    ω = np.expand_dims(np.exp(δ / η), axis=-1)
+    # print('w_', np.mean(ω))
+    ω_ = ω / np.mean(ω)
 
-    #print('w',w)
-    # print('w', w)
-    # print('w_', np.mean(w))
-    print('KL', np.mean(w*np.log(w)))
+    #print('ω',ω)
+    # print('ω', ω)
+    # print('w_', np.mean(ω))
+    print('KL -->', np.mean(ω_*np.log(ω_)), ' <------------')
 
-    #print('w', w.shape)
+    #print('ω', ω.shape)
 
-    D = np.eye(len(w)) * w
+    W = np.eye(len(ω)) * ω
     Φ = np.array(states)
     ã = np.array(actions)
 
-    # print('D', D)
+    # print('W', W)
     # print('Φ', Φ.shape)
     # print('ã', ã.shape)
 
 
-    #a_ = w * np.array(actions)
-    #φ_ = w * np.array(states)
+    #a_ = ω * np.array(actions)
+    #φ_ = ω * np.array(states)
     # print('φ_', φ_.shape)
 
-    θ = np.linalg.solve(Φ.T @ D @ Φ, Φ.T @ D @ ã)
+    θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-6 * np.eye(Φ.shape[-1]), Φ.T @ W @ ã)
 
     # print('ã', ã.shape)
     # print('Φ', Φ.shape)
-    # print('D', D.shape)
+    # print('W', W.shape)
     # print('θ', θ.shape)
     #
     #
-    # print('zähler', np.sum( np.square( ã - D @ Φ @ θ ) ))
-    # print('nenner', np.trace(D))
-    Z = ( np.square(np.sum(w)) - np.sum(np.square(w)) ) / np.sum(w)
-    σ = np.sqrt( np.sum( D @ np.square(ã - Φ @ θ) ) / Z )
+    # print('zähler', np.sum( np.square( ã - W @ Φ @ θ ) ))
+    # print('nenner', np.trace(W))
+    Z = ( np.square(np.sum(ω)) - np.sum(np.square(ω)) ) / np.sum(ω)
+    σ = np.sqrt( np.sum( W @ np.square(ã - Φ @ θ) ) / Z )
+
+    end_fit_new_policy = time.time()
+    # print('fitting', end_fit_new_policy-start_fit_new_policy)
 
     # print('θ', θ.shape)
     print('σ', σ)
