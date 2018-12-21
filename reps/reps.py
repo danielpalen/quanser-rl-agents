@@ -12,11 +12,14 @@ import quanser_robots
 
 parser = argparse.ArgumentParser(description='Solve the different gym envs with PPO')
 parser.add_argument('experiment_id', type=str, help='identifier to store experiment results')
-parser.add_argument('--env', type=str, default='pendulum', help="name of the gym environment to be used for training [pendulum, double_pendulum, furuta, balancer]")
+parser.add_argument('--env', type=str, default='pendulum',
+                    help="environment to be used for training [pendulum, double_pendulum, furuta, balancer]")
 parser.add_argument('--eval', action='store_true', help='toggles evaluation mode')
 parser.add_argument('--render', action='store_true', help='render the environment')
-parser.add_argument('--resume', action='store_true', help='resume training on an existing model by loading the last checkpoint')
-parser.add_argument('--n_steps', type=int, default=3000, help='number of agent steps when collecting trajectories for one epoch')
+parser.add_argument('--resume', action='store_true',
+                    help='resume training on an existing model by loading the last checkpoint')
+parser.add_argument('--n_steps', type=int, default=3000,
+                    help='number of agent steps when collecting trajectories for one epoch')
 
 args = parser.parse_args()
 writer = SummaryWriter(log_dir=f"./out/summary/{args.experiment_id}")
@@ -44,6 +47,7 @@ cov = np.eye(3) * 1/band
 
 ε = 0.1
 γ = 0.99
+KL = 0.0
 
 if args.resume or args.eval:
     file = np.load(f"./out/models/{args.experiment_id}.npz")
@@ -69,7 +73,7 @@ else:
     epoch = 0
 
 
-def φ(s):
+def φ_fn(s):
     """Feature function to generate fourier features from environment states."""
     feature_vector = [np.sin(f @ (s + o)) for f, o in fourier_feature_parameters]
     return np.array(feature_vector)
@@ -85,26 +89,27 @@ while epoch < 100:
 
     epoch += 1
     states, states_0, next_states, actions, rewards = [], [], [], [], []
+
     state = env.reset()
-    states_0.append(φ(state))
+    states_0.append(φ_fn(state))
 
     # Sample trajectories
     for step in range(n_steps):
 
-        action = np.random.normal(loc=φ(state).T @ θ, scale=σ)
+        action = np.random.normal(loc=φ_fn(state).T @ θ, scale=σ)
         state_, reward, done, _ = env.step(action)
 
         if args.render:
             env.render()
 
-        states.append(φ(state))
+        states.append(φ_fn(state))
         actions.append(action)
         rewards.append(reward)
-        next_states.append(φ(state_))
+        next_states.append(φ_fn(state_))
 
         if np.random.rand() < 1-γ:
             state = env.reset()
-            states_0.append(φ(state))
+            states_0.append(φ_fn(state))
         else:
             state = state_
 
@@ -115,17 +120,17 @@ while epoch < 100:
         ############################
 
         R = np.array(rewards)
-        φ_s = np.array(states)
-        φ_s_ = np.array(next_states)
+        φ = np.array(states)
+        φ_ = np.array(next_states)
         φ_0 = np.expand_dims(np.mean(states_0, axis=0), axis=0)
 
-        Φ = γ*φ_s_ - φ_s + (1-γ)*φ_0
+        Φ = γ * φ_ - φ + (1 - γ) * φ_0
 
-        def dual(params):
+        def dual(p):
             """dual formulation for of the REPS objective function"""
-            η, α = params[0], params[1:]
+            η, α = p[0], p[1:]
             δ = R + α.dot(Φ.T)
-            return η*ε + np.max(δ) + η * np.log(np.mean(np.exp((δ-np.max(δ))/η))) + 1e-6 * np.linalg.norm(α, 2)
+            return η * ε + np.max(δ) + η * np.log(np.mean(np.exp((δ-np.max(δ))/η))) + 1e-6 * np.linalg.norm(α, 2)
 
         params = np.concatenate([np.array([η]), α])
         bounds = [(1e-8, None)] + [(None, None)] * len(α)  # bounds for η and α
@@ -145,14 +150,14 @@ while epoch < 100:
         Φ = np.array(states)
         ã = np.array(actions)
 
+        # Update policy parameters
         θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-6 * np.eye(Φ.shape[-1]), Φ.T @ W @ ã)
-        Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
 
+        Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
         σ = np.sqrt(np.sum(W @ np.square(ã - Φ @ θ)) / Z)
 
         writer.add_scalar('rl/reward', torch.tensor(np.mean(rewards)), epoch)
         writer.add_scalar('rl/η',  torch.tensor(η), epoch)
-        # writer.add_scalar('rl/α',  torch.tensor(α), epoch)
         writer.add_scalar('rl/KL', torch.tensor(KL), epoch)
         writer.add_scalar('rl/σ', torch.tensor(σ), epoch)
 
