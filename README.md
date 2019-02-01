@@ -20,7 +20,12 @@ git clone https://github.com/danielpalen/rl-research-lab-class.git
 cd rl-research-lab-class
 ```
 - quansar env install...
+```
+https://git.ias.informatik.tu-darmstadt.de/quanser/clients
+``
 - pip installs...
-
+```
+numpy, pytorch, tensorflow, tensorboardX
+```
 ## Run Experiments
 ...
