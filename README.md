@@ -36,7 +36,10 @@ Install the modified OpenAI gym environments by first cloning the git repository
 
 and then install by executing
 
-```cd clients ; pip install -e .```
+```
+cd clients
+pip install -e .
+```
 
 ### Pytorch framework
 As we used the pytorch framework (<https://pytorch.org/#pip-install-pytorch>) install the appropriate version:
