@@ -27,6 +27,8 @@ and then activate it by executing
 
 ```conda activate rl-env```
 
+**IMPORTANT: When not using a virtual environment, use *pip3* instead of *pip* in the instructions below.**
+
 ### Quanser Robots
 Install the modified OpenAI gym environments by first cloning the git repository
 
