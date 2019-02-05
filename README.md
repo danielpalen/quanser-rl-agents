@@ -6,7 +6,7 @@ The algorihtms implemented are:
 - Actor-Critic Relative Entropy Policy Search (ACREPS)
 - Proximal Policy Optimization (PPO)
 
-In practive they were only tested on the following environments:
+In practice they were only tested on the following environments:
 - Pendulum Swingup
 - Double Cartpole
 - Furuta Pendulum
@@ -14,18 +14,55 @@ In practive they were only tested on the following environments:
 The last three are custom gym environments implemented in the quansar robots repository.
 
 ## Installation
-- Clone the repository and cd into it
-```
-git clone https://github.com/danielpalen/rl-research-lab-class.git
-cd rl-research-lab-class
-```
-- quansar env install...
-```
-https://git.ias.informatik.tu-darmstadt.de/quanser/clients
-``
-- pip installs...
-```
-numpy, pytorch, tensorflow, tensorboardX
-```
+
+In order to run the code provided, follow these steps to install the necessary components.
+
+### Conda environment
+
+In order to manage the different python versions we use conda for creating virtual environments. First, get mini conda from <https://conda.io/en/latest/miniconda.html> and install it. Next, create an empty virtual conda environment with Python 3. Create the environment by executing:
+
+```conda create --name rl-env python=3.6.5```
+
+and then activate it by executing
+
+```conda activate rl-env```
+
+### Quanser Robots
+Install the modified OpenAI gym environments by first cloning the git repository
+
+```git clone https://git.ias.informatik.tu-darmstadt.de/quanser/clients.git```
+
+and then install by executing
+
+```cd clients ; pip install -e .```
+
+### Pytorch framework
+As we used the pytorch framework (<https://pytorch.org/#pip-install-pytorch>) install the appropriate version:
+
+For mac:
+
+```pip install torch torchvision```
+
+For Linux (non-gpu version):
+
+```pip3 install https://download.pytorch.org/whl/cpu/torch-1.0.0-cp36-cp36m-linux_x86_64.whl```
+```pip3 install torchvision```
+
+### Tensorflow and TensorboardX
+
+In order to install tensorflow (non-gpu version), execute:
+
+```pip install tensorflow```
+
+For evaluation and visualization of the learning, install tensorboardX, which is a tensorboard port for Pytorch:
+
+```pip install tensorboardX```
+
+### Installing the learning algorithms
+
+```git clone https://github.com/danielpalen/rl-research-lab-class.git```
+
+Now you are all set to train a model or evaluate an algorithm.
+
 ## Run Experiments
 ...
