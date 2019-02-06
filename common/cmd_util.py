@@ -1,16 +1,14 @@
 import argparse
 
 
-class ArgumentParser(argparse.ArgumentParser):
+class ArgumentParser:
     """
     Custom Argument parser that differentiates between the different algorithms that are implemented in this repository
     and adds custom arguments for each algorithm.
     """
 
-    def __init__(self):
-        super().__init__()
-
-    def parse(self):
+    @staticmethod
+    def parse():
         parser = argparse.ArgumentParser(description='Solve the different gym environments')
 
         # ---------------------
@@ -59,11 +57,11 @@ class ArgumentParser(argparse.ArgumentParser):
         #  PPO Arguments
         # ---------------------
         ppo_parser = subparsers.add_parser('PPO')
-        ppo_parser.add_argument('--gamma', type=float, default=0.99, help='discount factor γ.')
+        ppo_parser.add_argument('--gamma', type=float, default=0.9, help='discount factor γ.')
         ppo_parser.add_argument('--p_lr', type=float, default=7e-4, help='learning rate policy network')
         ppo_parser.add_argument('--v_lr', type=float, default=7e-4, help='learning rate value network')
-        ppo_parser.add_argument('--mb_size', type=int, default=32, help='PPO mini-batch size')
-        ppo_parser.add_argument('--n_mb_epochs', type=int, default=5,
+        ppo_parser.add_argument('--mb_size', type=int, default=64, help='PPO mini-batch size')
+        ppo_parser.add_argument('--n_mb_epochs', type=int, default=10,
                                 help='number of epochs of PPO mini-batch optimization')
 
         args = parser.parse_args()
@@ -71,4 +69,8 @@ class ArgumentParser(argparse.ArgumentParser):
         if args.command is None:
             raise Exception('No algorithm specified! The first argument ')
 
+        args.algo_name = args.command
+        args.name = f"{args.algo_name}_{args.name}"
+        del args.command
+        del args.robot
         return args
