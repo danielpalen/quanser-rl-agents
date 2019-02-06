@@ -1,167 +1,173 @@
-import argparse
-
 import torch
 import numpy as np
+# import autograd.numpy as np
+# from autograd import grad
 from scipy.optimize import minimize
 
 from tensorboardX import SummaryWriter
 
-import gym
-import quanser_robots
 
+class REPS:
+    """
+    Relative Entropy Policy Search based on
+    https://www.ias.informatik.tu-darmstadt.de/uploads/Team/JanPeters/Peters2010_REPS.pdf
+    """
 
-parser = argparse.ArgumentParser(description='Solve the different gym envs with PPO')
-parser.add_argument('experiment_id', type=str, help='identifier to store experiment results')
-parser.add_argument('--env', type=str, default='pendulum',
-                    help="environment to be used for training [pendulum, double_pendulum, furuta, balancer]")
-parser.add_argument('--eval', action='store_true', help='toggles evaluation mode')
-parser.add_argument('--render', action='store_true', help='render the environment')
-parser.add_argument('--resume', action='store_true',
-                    help='resume training on an existing model by loading the last checkpoint')
-parser.add_argument('--n_steps', type=int, default=3000,
-                    help='number of agent steps when collecting trajectories for one epoch')
+    def __init__(self, name, env, n_epochs, n_steps, gamma, epsilon, n_fourier, fourier_band, render=False,
+                 resume=False, eval=False, seed=None):
+        """
+        :param name:
+        :param env:
+        :param n_epochs:
+        :param n_steps:
+        :param render:
+        :param resume:
+        :param eval:
+        :param gamma:
+        :param epsilon:
+        :param n_fourier:
+        :param fourier_band:
+        """
+        self.name = name
+        self.env = env
+        self.n_epochs = n_epochs
+        self.n_steps = n_steps
+        self.render = render
+        self.resume = resume
+        self.eval = eval
+        self.training = not eval
+        self.writer = SummaryWriter(log_dir=f"./out/summary/{self.name}")
 
-args = parser.parse_args()
-writer = SummaryWriter(log_dir=f"./out/summary/{args.experiment_id}")
+        self.γ = gamma
+        self.ε = epsilon
 
-training = not args.eval
+        fourier_dim = self.env.observation_space.shape[0]
 
-
-environments = {
-    'balancer':        'BallBalancerSim-v0',
-    'double_pendulum': 'DoublePendulum-v0',
-    'furuta':          'Qube-v0',
-    'pendulum':        'Pendulum-v0',
-}
-
-env = gym.make(environments[args.env])
-
-##############################
-# Generate Fourier Features  #
-##############################
-
-feature_dim = env.observation_space.shape[0]
-n_fourier_features = 75
-band = np.array([0.5, 0.5, 4])
-cov = np.eye(3) * 1/band
-
-ε = 0.1
-γ = 0.99
-KL = 0.0
-
-if args.resume or args.eval:
-    file = np.load(f"./out/models/{args.experiment_id}.npz")
-    fourier_feature_parameters = file['fourier_feats']
-    θ = file['θ']
-    σ = file['σ'] if args.resume else 0.0  # zero variance for evaluation
-    α = file['α']
-    η = file['η']
-    epoch = file['epoch']
-    print(f"LOADED Model at epoch {epoch}")
-else:
-    fourier_feature_parameters = []
-    for _ in range(n_fourier_features):
-        freq = np.random.multivariate_normal(np.array([0, 0, 0]), cov)
-        offset = 2 * np.pi * np.random.rand(feature_dim) - np.pi
-        fourier_feature_parameters.append((freq, offset))
-    fourier_feature_parameters = np.array(fourier_feature_parameters)
-
-    θ = np.random.randn(n_fourier_features, env.action_space.shape[0])
-    σ = 16.0
-    α = np.random.randn(n_fourier_features)
-    η = np.random.rand()
-    epoch = 0
-
-
-def φ_fn(s):
-    """Feature function to generate fourier features from environment states."""
-    feature_vector = [np.sin(f @ (s + o)) for f, o in fourier_feature_parameters]
-    return np.array(feature_vector)
-
-
-n_steps = args.n_steps
-
-while epoch < 100:
-
-    ############################
-    #        SAMPLING          #
-    ############################
-
-    epoch += 1
-    states, states_0, next_states, actions, rewards = [], [], [], [], []
-
-    state = env.reset()
-    states_0.append(φ_fn(state))
-
-    # Sample trajectories
-    for step in range(n_steps):
-
-        action = np.random.normal(loc=φ_fn(state).T @ θ, scale=σ)
-        state_, reward, done, _ = env.step(action)
-
-        if args.render:
-            env.render()
-
-        states.append(φ_fn(state))
-        actions.append(action)
-        rewards.append(reward)
-        next_states.append(φ_fn(state_))
-
-        if np.random.rand() < 1-γ:
-            state = env.reset()
-            states_0.append(φ_fn(state))
+        if self.resume or self.eval:
+            file = np.load(f"./out/models/{self.name}.npz")
+            self.fourier_features = file['fourier_features']
+            self.θ = file['θ']
+            self.σ = file['σ'] if self.resume else 0.0  # zero variance for evaluation
+            self.α = file['α']
+            self.η = file['η']
+            self.epoch = file['epoch']
+            print(f"LOADED Model at epoch {self.epoch}")
         else:
-            state = state_
+            fourier_feature_parameters = []
+            fourier_cov = np.eye(len(fourier_band)) / fourier_band
+            for _ in range(n_fourier):
+                freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov)
+                offset = 2 * np.pi * np.random.rand(fourier_dim) - np.pi
+                fourier_feature_parameters.append((freq, offset))
+            self.fourier_features = np.array(fourier_feature_parameters)
+            self.θ = np.random.randn(n_fourier, self.env.action_space.shape[0])
+            self.σ = 16.0
+            self.α = np.random.randn(n_fourier)
+            self.η = np.random.rand()
+            self.epoch = 0
+        self.kl = 0.0
 
-    if training:
+    def φ_fn(self, state):
+        """
+        Calculates the feature vector of a given state using the self.fourier_features.
+        :param state: environment state
+        :return: feature vector for state
+        """
+        feature_vector = [np.sin(f @ (state + o)) for f, o in self.fourier_features]
+        return np.array(feature_vector)
 
-        ############################
-        #     DUAL OPTIMIZATION    #
-        ############################
+    def train(self):
+        """
+        Train REPS
+        """
+        while self.epoch < self.n_epochs or self.eval:
 
-        R = np.array(rewards)
-        φ = np.array(states)
-        φ_ = np.array(next_states)
-        φ_0 = np.expand_dims(np.mean(states_0, axis=0), axis=0)
+            ############################
+            #        SAMPLING          #
+            ############################
 
-        Φ = γ * φ_ - φ + (1 - γ) * φ_0
+            self.epoch += 1
+            states, states_0, next_states, actions, rewards = [], [], [], [], []
 
-        def dual(p):
-            """dual formulation for of the REPS objective function"""
-            η, α = p[0], p[1:]
-            δ = R + α.dot(Φ.T)
-            return η * ε + np.max(δ) + η * np.log(np.mean(np.exp((δ-np.max(δ))/η))) + 1e-6 * np.linalg.norm(α, 2)
+            state = self.env.reset()
+            states_0.append(self.φ_fn(state))
 
-        params = np.concatenate([np.array([η]), α])
-        bounds = [(1e-8, None)] + [(None, None)] * len(α)  # bounds for η and α
-        res = minimize(dual, params, method='SLSQP', bounds=bounds)
-        η, α = res.x[0], res.x[1:]
+            # Sample trajectories
+            for step in range(self.n_steps):
 
-        ############################
-        #      FIT NEW POLICY      #
-        ############################
+                action = np.random.normal(loc=self.φ_fn(state).T @ self.θ, scale=self.σ)
+                state_, reward, done, _ = self.env.step(action)
 
-        δ = R + α.dot(Φ.T)
-        ω = np.expand_dims(np.exp(δ / η), axis=-1)
-        ω_ = ω / np.mean(ω)
-        KL = np.mean(ω_*np.log(ω_))
+                if self.render:
+                    self.env.render()
 
-        W = np.eye(len(ω)) * ω
-        Φ = np.array(states)
-        ã = np.array(actions)
+                states.append(self.φ_fn(state))
+                actions.append(action)
+                rewards.append(reward)
+                next_states.append(self.φ_fn(state_))
 
-        # Update policy parameters
-        θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-6 * np.eye(Φ.shape[-1]), Φ.T @ W @ ã)
+                # if done:
+                #     state = env.reset()
+                #     states_0.append(φ_fn(state))
+                # else:
+                #     state = state_
 
-        Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
-        σ = np.sqrt(np.sum(W @ np.square(ã - Φ @ θ)) / Z)
+                if np.random.rand() < 1 - self.γ:
+                    state = self.env.reset()
+                    states_0.append(self.φ_fn(state))
+                else:
+                    state = state_
 
-        writer.add_scalar('rl/reward', torch.tensor(np.mean(rewards)), epoch)
-        writer.add_scalar('rl/η',  torch.tensor(η), epoch)
-        writer.add_scalar('rl/KL', torch.tensor(KL), epoch)
-        writer.add_scalar('rl/σ', torch.tensor(σ), epoch)
+            if self.training:
+                ############################
+                #     DUAL OPTIMIZATION    #
+                ############################
 
-        np.savez(f"./out/models/{args.experiment_id}.npz", θ=θ, α=α, η=η, σ=σ,
-                 fourier_feats=fourier_feature_parameters, epoch=epoch)
+                R = np.array(rewards)
+                φ = np.array(states)
+                φ_ = np.array(next_states)
+                φ_0 = np.expand_dims(np.mean(states_0, axis=0), axis=0)
 
-    print(f"{epoch:4} rewards {np.mean(rewards):10.6f} | KL {KL:8.6f} | σ {σ}")
+                Φ = self.γ * φ_ - φ + (1 - self.γ) * φ_0
+
+                # Φ = φ_ - φ
+
+                def dual(p):
+                    """dual formulation for of the REPS objective function"""
+                    η, α = p[0], p[1:]
+                    δ = R + α.dot(Φ.T)
+                    return η * self.ε + np.max(δ) + η * np.log(np.mean(np.exp((δ - np.max(δ)) / η))) + 1e-6 * np.linalg.norm(α, 2)
+
+                params = np.concatenate([np.array([self.η]), self.α])
+                bounds = [(1e-8, None)] + [(None, None)] * len(self.α)  # bounds for η and α
+                res = minimize(dual, params, method='SLSQP', bounds=bounds)
+                self.η, self.α = res.x[0], res.x[1:]
+
+                ############################
+                #      FIT NEW POLICY      #
+                ############################
+
+                δ = R + self.α.dot(Φ.T)
+                ω = np.expand_dims(np.exp(δ / self.η), axis=-1)
+                ω_ = ω / np.mean(ω)
+                self.kl = np.mean(ω_ * np.log(ω_))
+
+                W = np.eye(len(ω)) * ω
+                Φ = np.array(states)
+                a = np.array(actions)
+
+                # Update policy parameters
+                self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-6 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
+
+                Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
+                self.σ = np.sqrt(np.sum(W @ np.square(a - Φ @ self.θ)) / Z)
+
+                self.writer.add_scalar('rl/reward', torch.tensor(np.sum(rewards)), self.epoch)
+                self.writer.add_scalar('rl/η', torch.tensor(self.η), self.epoch)
+                self.writer.add_scalar('rl/KL', torch.tensor(self.kl), self.epoch)
+                self.writer.add_scalar('rl/σ', torch.tensor(self.σ), self.epoch)
+
+                np.savez(f"./out/models/{self.name}.npz", θ=self.θ, α=self.α, η=self.η, σ=self.σ,
+                         fourier_features=self.fourier_features, epoch=self.epoch)
+
+            print(f"{self.epoch:4} rewards {np.sum(rewards):13.6f} | KL {self.kl:8.6f} | σ {self.σ}")
