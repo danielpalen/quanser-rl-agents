@@ -14,7 +14,7 @@ class REPS:
     """
 
     def __init__(self, name, env, n_epochs, n_steps, gamma, epsilon, n_fourier, fourier_band, render=False,
-                 resume=False, eval=False, seed=None):
+                 resume=False, eval=False, seed=None, **kwargs):
         """
         :param name:
         :param env:

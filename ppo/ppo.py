@@ -75,7 +75,8 @@ class PPO:
     Proximal Policy Optimization based on https://arxiv.org/abs/1707.06347
     """
 
-    def __init__(self, name, env, n_epochs, n_steps, gamma, p_lr, v_lr, n_mb_epochs, mb_size, render=False, resume=False, eval=False, seed=None):
+    def __init__(self, *, name, env, n_epochs, n_steps, gamma, p_lr, v_lr, n_mb_epochs, mb_size, clip, render=False,
+                 resume=False, eval=False, seed=None, **kwargs):
 
         self.name = name
         self.env = env
@@ -87,6 +88,7 @@ class PPO:
         self.training = not eval
         self.writer = SummaryWriter(log_dir=f"./out/summary/{self.name}")
 
+        self.clip = clip
         self.γ = gamma
         self.n_mb_epochs = n_mb_epochs
         self.mb_size = mb_size
@@ -230,7 +232,7 @@ class PPO:
 
                         self.optimizer.zero_grad()
                         surr1 = ratio * mb_advs
-                        surr2 = torch.clamp(ratio, 0.8, 1.2) * mb_advs
+                        surr2 = torch.clamp(ratio, 1-self.clip, 1+self.clip) * mb_advs
                         policy_loss = -torch.min(surr1, surr2).mean()
                         policy_loss.backward()
                         nn.utils.clip_grad_norm_(self.policy.parameters(), 0.5)
