@@ -11,7 +11,7 @@ class ACREPS:
     https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247
     """
 
-    def __init__(self, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
+    def __init__(self, *, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
                  fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
         if seed is not None:
             np.random.seed(seed)

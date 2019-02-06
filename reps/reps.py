@@ -13,7 +13,7 @@ class REPS:
     https://www.ias.informatik.tu-darmstadt.de/uploads/Team/JanPeters/Peters2010_REPS.pdf
     """
 
-    def __init__(self, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
+    def __init__(self, *, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
                  fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
         """
         :param name:
