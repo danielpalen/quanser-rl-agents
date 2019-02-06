@@ -2,15 +2,16 @@
 
 This repository implements a set of reinforcement learning algorithms to run on OpenAI gym environments.
 The algorihtms implemented are:
-- Relative Entropy Policy Search (REPS)
-- Actor-Critic Relative Entropy Policy Search (ACREPS)
-- Proximal Policy Optimization (PPO)
+- [Relative Entropy Policy Search (REPS)](https://www.ias.informatik.tu-darmstadt.de/uploads/Team/JanPeters/Peters2010_REPS.pdf)
+- [Actor-Critic Relative Entropy Policy Search (ACREPS)](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247)
+- [Proximal Policy Optimization (PPO)](https://arxiv.org/abs/1707.06347)
 
 In practice they were only tested on the following environments:
 - Pendulum Swingup
 - Double Cartpole
 - Furuta Pendulum
 - Ball Ballancer
+
 The last three are custom gym environments implemented in the quansar robots repository.
 
 ## Installation
