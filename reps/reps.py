@@ -13,8 +13,8 @@ class REPS:
     https://www.ias.informatik.tu-darmstadt.de/uploads/Team/JanPeters/Peters2010_REPS.pdf
     """
 
-    def __init__(self, name, env, n_epochs, n_steps, gamma, epsilon, n_fourier, fourier_band, render=False,
-                 resume=False, eval=False, seed=None, **kwargs):
+    def __init__(self, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
+                 fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
         """
         :param name:
         :param env:
@@ -28,6 +28,9 @@ class REPS:
         :param n_fourier:
         :param fourier_band:
         """
+        if seed is not None:
+            np.random.seed(seed)
+
         self.name = name
         self.env = env
         self.n_epochs = n_epochs
@@ -54,6 +57,9 @@ class REPS:
             print(f"LOADED Model at epoch {self.epoch}")
         else:
             fourier_feature_parameters = []
+            if fourier_band is None:
+                # if fourier_band is not set, then set it heuristically.
+                fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
             fourier_cov = np.eye(len(fourier_band)) / fourier_band
             for _ in range(n_fourier):
                 freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov)
@@ -66,6 +72,8 @@ class REPS:
             self.η = np.random.rand()
             self.epoch = 0
         self.kl = 0.0
+
+        print('fourier_band', fourier_band)
 
     def φ_fn(self, state):
         """
@@ -106,17 +114,12 @@ class REPS:
                 rewards.append(reward)
                 next_states.append(self.φ_fn(state_))
 
-                # if done:
-                #     state = env.reset()
-                #     states_0.append(φ_fn(state))
-                # else:
-                #     state = state_
-
                 if np.random.rand() < 1 - self.γ:
                     state = self.env.reset()
                     states_0.append(self.φ_fn(state))
                 else:
                     state = state_
+                print(f"step {step}", end="\r")
 
             if self.training:
                 ############################
@@ -127,10 +130,7 @@ class REPS:
                 φ = np.array(states)
                 φ_ = np.array(next_states)
                 φ_0 = np.expand_dims(np.mean(states_0, axis=0), axis=0)
-
                 Φ = self.γ * φ_ - φ + (1 - self.γ) * φ_0
-
-                # Φ = φ_ - φ
 
                 def dual(p):
                     """dual formulation for of the REPS objective function"""
@@ -149,6 +149,7 @@ class REPS:
 
                 δ = R + self.α.dot(Φ.T)
                 ω = np.expand_dims(np.exp(δ / self.η), axis=-1)
+                # The KL can be computed by looking at the weights only
                 ω_ = ω / np.mean(ω)
                 self.kl = np.mean(ω_ * np.log(ω_))
 

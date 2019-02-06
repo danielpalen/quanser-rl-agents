@@ -4,14 +4,17 @@ from scipy.optimize import minimize
 
 from tensorboardX import SummaryWriter
 
+
 class ACREPS:
     """
     Actor-Critic Relative Entropy Policy Search based on
     https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247
     """
 
-    def __init__(self, name, env, n_epochs, n_steps, gamma, epsilon, n_fourier, fourier_band, render=False,
-                 resume=False, eval=False, seed=None, **kwargs):
+    def __init__(self, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
+                 fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
+        if seed is not None:
+            np.random.seed(seed)
 
         self.name = name
         self.env = env
@@ -39,6 +42,10 @@ class ACREPS:
             print(f"LOADED Model at epoch {self.epoch}")
         else:
             fourier_feature_parameters = []
+            if fourier_band is None:
+                # if fourier_band is not set, then set it heuristically.
+                fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
+            fourier_band = list(fourier_band)
             fourier_cov = np.eye(len(fourier_band)) / fourier_band
             for _ in range(n_fourier):
                 freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov)
@@ -92,7 +99,6 @@ class ACREPS:
                     state = self.env.reset()
                 else:
                     state = state_
-
                 print(f"step {step}", end="\r")
 
             if self.training:
@@ -107,17 +113,7 @@ class ACREPS:
                 for t in reversed(range(len(rewards))):
                     R = rewards[t] + self.γ * R * (1 - dones[t])
                     returns[t] = R
-
-                # for r, ret, d in zip(rewards, returns, dones):
-                #     print(d, r, ret)
-
                 φ = np.array(states)
-
-                # φ_ = np.array(next_states)
-
-                # Φ = γ * φ_ - φ + (1 - γ) * φ_0
-
-                # print('returns', returns.shape)
 
                 def dual(p):
                     """dual formulation of the ACREPS objective function"""
@@ -137,6 +133,7 @@ class ACREPS:
 
                 δ = returns - self.α.dot(φ.T)
                 ω = np.expand_dims(np.exp(δ / self.η), axis=-1)
+                # The KL can be computed by looking at the weights only
                 ω_ = ω / np.mean(ω)
                 self.kl = np.mean(ω_ * np.log(ω_))
 

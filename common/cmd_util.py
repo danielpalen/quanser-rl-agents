@@ -20,7 +20,7 @@ class ArgumentParser:
         parser.add_argument('--env', type=str, required=True, help='name of the environment to be learned')
         parser.add_argument('--robot', action='store_true', help='run the experiment using the real robot environment')
 
-        parser.add_argument('--n_epochs', type=int, default=20, help='number of training epochs')
+        parser.add_argument('--n_epochs', type=int, default=40, help='number of training epochs')
         parser.add_argument('--n_steps', type=int, default=3000, help='number of environment steps per epoch')
         parser.add_argument('--seed', type=int, help='seed for torch/numpy/gym to make experiments reproducible')
 
@@ -57,6 +57,7 @@ class ArgumentParser:
         #  PPO Arguments
         # ---------------------
         ppo_parser = subparsers.add_parser('PPO')
+        ppo_parser.add_argument('--clip', type=float, default=0.2, help='clipping factor')
         ppo_parser.add_argument('--gamma', type=float, default=0.9, help='discount factor γ.')
         ppo_parser.add_argument('--p_lr', type=float, default=7e-4, help='learning rate policy network')
         ppo_parser.add_argument('--v_lr', type=float, default=7e-4, help='learning rate value network')
@@ -72,5 +73,4 @@ class ArgumentParser:
         args.algo_name = args.command
         args.name = f"{args.algo_name}_{args.name}"
         del args.command
-        del args.robot
         return args

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical, Normal, MultivariateNormal
+from torch.distributions import MultivariateNormal
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from tensorboardX import SummaryWriter
@@ -28,7 +28,6 @@ class PolicyNetwork(nn.Module):
         x = torch.tanh(self.h2(x))
         μ = self.action_scaling * torch.tanh(self.action_mu(x))
         σ = 10 * F.softplus(self.action_sig(x)) + 1e-12  # make sure we never predict zero variance.
-        #print('μ', μ, 'σ', σ)
         return μ, σ
 
     def select_action(self, state, training=True):
@@ -37,12 +36,9 @@ class PolicyNetwork(nn.Module):
             μ, σ = self.forward(state)
             σ = σ if training else torch.zeros_like(σ)+1e-12
             Σ = torch.stack([σ_ * torch.eye(self.num_actions) for σ_ in σ])
-        # print('μ', μ, 'σ', σ, 'Σ', Σ)
-        # print('Σ', Σ)
         a_dist = MultivariateNormal(μ, Σ)
         action = a_dist.sample().squeeze(0)
         log_prob = a_dist.log_prob(action)
-        # print('action', action, 'log_p', log_prob)
         return action.numpy(), log_prob.numpy()
 
 
@@ -75,8 +71,11 @@ class PPO:
     Proximal Policy Optimization based on https://arxiv.org/abs/1707.06347
     """
 
-    def __init__(self, *, name, env, n_epochs, n_steps, gamma, p_lr, v_lr, n_mb_epochs, mb_size, clip, render=False,
-                 resume=False, eval=False, seed=None, **kwargs):
+    def __init__(self, *, name, env, n_epochs=100, n_steps=3000, gamma=0.9, p_lr=7e-4, v_lr=7e-4, n_mb_epochs=5,
+                 mb_size=32, clip=0.2, render=False, resume=False, eval=False, seed=None, **kwargs):
+
+        if seed is not None:
+            torch.manual_seed(seed)
 
         self.name = name
         self.env = env
@@ -197,7 +196,7 @@ class PPO:
 
                 ##############################
                 # Advantage Calculation      #
-                # ############################
+                ##############################
 
                 # - GAE ----------------------
                 # with torch.no_grad():
@@ -239,7 +238,6 @@ class PPO:
                         self.optimizer.step()
 
                         self.optimizer_v.zero_grad()
-                        # value_loss = F.smooth_l1_loss(V(mb_states), mb_returns)
                         value_loss = (self.V(mb_states) - mb_returns).pow(2).mean()
                         value_loss.backward()
                         nn.utils.clip_grad_norm_(self.V.parameters(), 0.5)
