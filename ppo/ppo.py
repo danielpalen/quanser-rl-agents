@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -72,7 +73,8 @@ class PPO:
     """
 
     def __init__(self, *, name, env, n_epochs=100, n_steps=3000, gamma=0.9, p_lr=7e-4, v_lr=7e-4, n_mb_epochs=5,
-                 mb_size=32, clip=0.2, render=False, resume=False, eval=False, seed=None, **kwargs):
+                 mb_size=32, clip=0.2, gea=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
+                 summary_path=None, checkpoint_path=None, **kwargs):
 
         if seed is not None:
             torch.manual_seed(seed)
@@ -85,10 +87,14 @@ class PPO:
         self.resume = resume
         self.eval = eval
         self.training = not eval
-        self.writer = SummaryWriter(log_dir=f"./out/summary/{self.name}")
+        self.summary_path = summary_path
+        self.checkpoint_path = os.path.join(checkpoint_path, self.name + '.pt')
+        self.writer = SummaryWriter(log_dir=self.summary_path)
 
         self.clip = clip
         self.γ = gamma
+        self.λ = lam
+        self.gea = gea
         self.n_mb_epochs = n_mb_epochs
         self.mb_size = mb_size
 
@@ -100,7 +106,7 @@ class PPO:
         self.epoch = 0
 
         if self.eval or self.resume:
-            checkpoint = torch.load(f"./out/models/{self.name}.pt")
+            checkpoint = torch.load(self.checkpoint_path)
             self.policy.load_state_dict(checkpoint['model_state_dict'])
             self.V.load_state_dict(checkpoint['model_v_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -154,7 +160,7 @@ class PPO:
             rewards = torch.tensor(rewards, dtype=torch.float32).view(-1, 1)
             dones = torch.tensor(dones, dtype=torch.float32).view(-1, 1)
             # normalized_rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
-            mean_reward = rewards.sum() / (dones.sum() + 1)
+            mean_reward = rewards.sum()  # / (dones.sum() + 1)
             policy_losses, value_losses = [], []
 
             if self.training:
@@ -197,22 +203,20 @@ class PPO:
                 ##############################
                 # Advantage Calculation      #
                 ##############################
-
-                # - GAE ----------------------
-                # with torch.no_grad():
-                #     λ = 0.99
-                #     A_GAE = 0.0
-                #     advs = torch.zeros(n_steps)
-                #     δ = rewards + γ * V(next_states) * (1 - dones) - V(states)
-                #     # δ = rewards + γ * V(next_states) - V(states)
-                #     for t in reversed(range(n_steps)):
-                #         A_GAE = δ[t] + λ * γ * A_GAE * (1-dones[t])
-                #         advs[t] = A_GAE
-                #     # advs = torch.tensor(advs).view(-1, 1)
-
-                # - Temporal Difference ------
                 with torch.no_grad():
-                    advs = returns - self.V(states)
+                    if self.gae:
+                        # - GAE ----------------------
+                        A_GAE = 0.0
+                        advs = torch.zeros(self.n_steps)
+                        δ = rewards + self.γ * self.V(next_states) * (1 - dones) - self.V(states)
+                        # δ = rewards + γ * V(next_states) - V(states)
+                        for t in reversed(range(self.n_steps)):
+                            A_GAE = δ[t] + self.λ * self.γ * A_GAE * (1-dones[t])
+                            advs[t] = A_GAE
+                        advs = torch.tensor(advs).view(-1, 1)
+                    else:
+                        # - Temporal Difference ------
+                        advs = returns - self.V(states)
 
                 for _ in range(self.n_mb_epochs):
                     for index in BatchSampler(SubsetRandomSampler(range(self.n_steps)), self.mb_size, False):
@@ -253,7 +257,7 @@ class PPO:
                     'model_v_state_dict': self.V.state_dict(),
                     'optimizer_v_state_dict': self.optimizer_v.state_dict(),
                 }
-                torch.save(model_states, f"./out/models/{self.name}.pt")
+                torch.save(model_states, self.checkpoint_path)
 
                 self.writer.add_scalar('rl/reward', mean_reward, self.epoch)
 

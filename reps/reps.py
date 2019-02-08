@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 # import autograd.numpy as np
@@ -14,7 +15,8 @@ class REPS:
     """
 
     def __init__(self, *, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
-                 fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
+                 fourier_band=None, render=False, resume=False, eval=False, seed=None, summary_path=None,
+                 checkpoint_path=None, **kwargs):
         """
         :param name:
         :param env:
@@ -39,7 +41,9 @@ class REPS:
         self.resume = resume
         self.eval = eval
         self.training = not eval
-        self.writer = SummaryWriter(log_dir=f"./out/summary/{self.name}")
+        self.summary_path = summary_path
+        self.checkpoint_path = os.path.join(checkpoint_path, self.name + '.npz')
+        self.writer = SummaryWriter(log_dir=self.summary_path)
 
         self.γ = gamma
         self.ε = epsilon
@@ -47,7 +51,7 @@ class REPS:
         fourier_dim = self.env.observation_space.shape[0]
 
         if self.resume or self.eval:
-            file = np.load(f"./out/models/{self.name}.npz")
+            file = np.load(self.checkpoint_path)
             self.fourier_features = file['fourier_features']
             self.θ = file['θ']
             self.σ = file['σ'] if self.resume else 0.0  # zero variance for evaluation
@@ -168,7 +172,7 @@ class REPS:
                 self.writer.add_scalar('rl/KL', torch.tensor(self.kl), self.epoch)
                 self.writer.add_scalar('rl/σ', torch.tensor(self.σ), self.epoch)
 
-                np.savez(f"./out/models/{self.name}.npz", θ=self.θ, α=self.α, η=self.η, σ=self.σ,
+                np.savez(self.checkpoint_path, θ=self.θ, α=self.α, η=self.η, σ=self.σ,
                          fourier_features=self.fourier_features, epoch=self.epoch)
 
             print(f"{self.epoch:4} rewards {np.sum(rewards):13.6f} | KL {self.kl:8.6f} | σ {self.σ}")

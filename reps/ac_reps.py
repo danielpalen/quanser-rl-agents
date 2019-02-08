@@ -1,3 +1,5 @@
+import os
+
 import torch
 import numpy as np
 from scipy.optimize import minimize
@@ -12,7 +14,8 @@ class ACREPS:
     """
 
     def __init__(self, *, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, n_fourier=75,
-                 fourier_band=None, render=False, resume=False, eval=False, seed=None, **kwargs):
+                 fourier_band=None, render=False, resume=False, eval=False, seed=None, summary_path=None,
+                 checkpoint_path=None, **kwargs):
         if seed is not None:
             np.random.seed(seed)
 
@@ -24,7 +27,9 @@ class ACREPS:
         self.resume = resume
         self.eval = eval
         self.training = not eval
-        self.writer = SummaryWriter(log_dir=f"./out/summary/{self.name}")
+        self.summary_path = summary_path
+        self.checkpoint_path = os.path.join(checkpoint_path, self.name + '.npz')
+        self.writer = SummaryWriter(log_dir=self.summary_path)
 
         self.γ = gamma
         self.ε = epsilon
@@ -32,7 +37,7 @@ class ACREPS:
         fourier_dim = self.env.observation_space.shape[0]
 
         if self.resume or self.eval:
-            file = np.load(f"./out/models/{self.name}.npz")
+            file = np.load(self.checkpoint_path)
             self.fourier_features = file['fourier_features']
             self.θ = file['θ']
             self.σ = file['σ'] if self.resume else 0.0  # zero variance for evaluation
@@ -53,7 +58,7 @@ class ACREPS:
                 fourier_feature_parameters.append((freq, offset))
             self.fourier_features = np.array(fourier_feature_parameters)
             self.θ = np.random.randn(n_fourier, self.env.action_space.shape[0])
-            self.σ = 16.0
+            self.σ = 100.0 #16.0
             self.α = np.random.randn(n_fourier)
             self.η = np.random.rand()
             self.epoch = 0
@@ -144,15 +149,15 @@ class ACREPS:
                 # Update policy parameters
                 self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-9 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
                 Z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
-                # σ = np.sqrt(np.sum(W @ np.square(ã - Φ @ θ)) / Z)
-                self.σ = 0.5 * self.σ + 0.5 * np.sqrt(np.sum(W @ np.square(a - Φ @ self.θ)) / Z)
+                self.σ = np.sqrt(np.sum(W @ np.square(a - Φ @ self.θ)) / Z)
+                # self.σ = 0.5 * self.σ + 0.5 * np.sqrt(np.sum(W @ np.square(a - Φ @ self.θ)) / Z)
                 # σ = np.eye(env.action_space.shape[0]) * np.sum(W @ np.square(ã - Φ @ θ), axis=0) / Z
 
-                self.writer.add_scalar('rl/reward', torch.tensor(np.sum(rewards) / np.sum(dones), dtype=torch.float32), self.epoch)
+                self.writer.add_scalar('rl/reward', torch.tensor(np.sum(rewards), dtype=torch.float32), self.epoch)
                 self.writer.add_scalar('rl/η', torch.tensor(self.η), self.epoch)
                 self.writer.add_scalar('rl/KL', torch.tensor(self.kl), self.epoch)
 
-                np.savez(f"./out/models/{self.name}.npz", θ=self.θ, α=self.α, η=self.η, σ=self.σ,
+                np.savez(self.checkpoint_path, θ=self.θ, α=self.α, η=self.η, σ=self.σ,
                          fourier_features=self.fourier_features, epoch=self.epoch)
 
-            print(f"{self.epoch:4} rewards {np.sum(rewards) / np.sum(dones):13.6f} | KL {self.kl:8.6f} | σ {self.σ}")
+            print(f"{self.epoch:4} rewards {np.sum(rewards):13.6f} | KL {self.kl:8.6f} | σ {self.σ}")
