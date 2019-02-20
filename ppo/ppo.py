@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -36,11 +37,11 @@ class PolicyNetwork(nn.Module):
         with torch.no_grad():
             μ, σ = self.forward(state)
             σ = σ if training else torch.zeros_like(σ)+1e-12
-            Σ = torch.stack([σ_ * torch.eye(self.num_actions) for σ_ in σ])
+            Σ = torch.stack([σ_ * torch.eye(self.num_actions) for σ_ in σ])  # TODO: optimize?
         a_dist = MultivariateNormal(μ, Σ)
         action = a_dist.sample().squeeze(0)
         log_prob = a_dist.log_prob(action)
-        return action.numpy(), log_prob.numpy()
+        return action.numpy(), log_prob.numpy(), Σ
 
 
 class ValueNetwork(nn.Module):
@@ -73,7 +74,7 @@ class PPO:
     """
 
     def __init__(self, *, name, env, n_epochs=100, n_steps=3000, gamma=0.9, p_lr=7e-4, v_lr=7e-4, n_mb_epochs=5,
-                 mb_size=32, clip=0.2, gea=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
+                 mb_size=32, clip=0.2, gae=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
                  summary_path=None, checkpoint_path=None, **kwargs):
 
         if seed is not None:
@@ -94,7 +95,7 @@ class PPO:
         self.clip = clip
         self.γ = gamma
         self.λ = lam
-        self.gea = gea
+        self.gae = gae
         self.n_mb_epochs = n_mb_epochs
         self.mb_size = mb_size
 
@@ -125,12 +126,12 @@ class PPO:
         while self.epoch < self.n_epochs or self.eval:
             self.epoch += 1
             state = self.env.reset()
-            states, next_states, actions, log_probs, rewards, values, dones = [], [], [], [], [], [], []
+            states, next_states, actions, log_probs, covs, rewards, values, dones = [], [], [], [], [], [], [], []
 
             # Sample trajectories
             for step in range(self.n_steps):
 
-                action, log_prob = self.policy.select_action(state, training=self.training)
+                action, log_prob, Σ = self.policy.select_action(state, training=self.training)
                 state_, reward, done, _ = self.env.step(action)
 
                 if self.render:
@@ -140,6 +141,7 @@ class PPO:
                 next_states.append(state_)
                 actions.append(action)
                 log_probs.append(log_prob)
+                covs.append(Σ.numpy())
                 rewards.append(reward)
                 dones.append(done)
 
@@ -155,7 +157,7 @@ class PPO:
 
             states = torch.tensor(states, dtype=torch.float32)
             actions = torch.tensor(actions, dtype=torch.float32).view(-1, self.env.action_space.shape[0])
-            # next_states = torch.tensor(next_states, dtype=torch.float32)
+            next_states = torch.tensor(next_states, dtype=torch.float32)
             old_log_probs = torch.tensor(log_probs, dtype=torch.float32).view(-1, 1)
             rewards = torch.tensor(rewards, dtype=torch.float32).view(-1, 1)
             dones = torch.tensor(dones, dtype=torch.float32).view(-1, 1)
@@ -170,7 +172,6 @@ class PPO:
 
                 # - Monte Carlo --------------
                 R = self.V.get_value(state)
-                # returns = []
                 returns = torch.zeros(self.n_steps)
                 for t in reversed(range(self.n_steps)):
                     # R = normalized_rewards[t] + (1-dones[t]) * γ * R
@@ -213,7 +214,7 @@ class PPO:
                         for t in reversed(range(self.n_steps)):
                             A_GAE = δ[t] + self.λ * self.γ * A_GAE * (1-dones[t])
                             advs[t] = A_GAE
-                        advs = torch.tensor(advs).view(-1, 1)
+                        advs = advs.view(-1, 1)
                     else:
                         # - Temporal Difference ------
                         advs = returns - self.V(states)
@@ -228,7 +229,7 @@ class PPO:
                         mb_advs = advs[index]
 
                         μ, σ = self.policy(mb_states)
-                        Σ = torch.stack([σ_ * torch.eye(self.env.action_space.shape[0]) for σ_ in σ])
+                        Σ = torch.stack([σ_ * torch.eye(self.env.action_space.shape[0]) for σ_ in σ])  # TODO: optimize?
                         a_dist = MultivariateNormal(μ, Σ)
                         mb_log_probs = a_dist.log_prob(mb_actions).unsqueeze(-1)
                         ratio = torch.exp(mb_log_probs - mb_old_log_probs)
@@ -260,6 +261,12 @@ class PPO:
                 torch.save(model_states, self.checkpoint_path)
 
                 self.writer.add_scalar('rl/reward', mean_reward, self.epoch)
+                self.writer.add_scalar('rl/entropy', normal_entropy(covs), self.epoch)
 
             print(f"{self.epoch:4} rewards {mean_reward.item():13.3f} | policy {torch.stack(policy_losses).mean():12.3f}\
-             | value {torch.stack(value_losses).mean():12.3f}")
+             | value {torch.stack(value_losses).mean():12.3f} | σ {np.mean(covs)} | entropy {normal_entropy(covs)}")
+
+
+def normal_entropy(covariances):
+    """Calculates the mean entropy of gaussian polies given a list of covariance matrices Σ."""
+    return torch.mean(torch.from_numpy(0.5 * np.log(2*np.e*np.pi*np.linalg.det(covariances))))
