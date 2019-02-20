@@ -74,7 +74,7 @@ class PPO:
     """
 
     def __init__(self, *, name, env, n_epochs=100, n_steps=3000, gamma=0.9, p_lr=7e-4, v_lr=7e-4, n_mb_epochs=5,
-                 mb_size=32, clip=0.2, gae=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
+                 mb_size=64, clip=0.2, gae=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
                  summary_path=None, checkpoint_path=None, **kwargs):
 
         if seed is not None:
@@ -260,10 +260,27 @@ class PPO:
                 }
                 torch.save(model_states, self.checkpoint_path)
 
-                self.writer.add_scalar('rl/reward', mean_reward, self.epoch)
-                self.writer.add_scalar('rl/entropy', normal_entropy(covs), self.epoch)
+            # Evaluate the deterministic policy
+            n_eval_traj = 25
+            cumulative_reward = 0
+            i = 0
+            state = self.env.reset()
+            while i < n_eval_traj:
+                action, _, _ = self.policy.select_action(state, training=False)
+                next_state, reward, done, _ = self.env.step(action)
+                cumulative_reward += reward
+                if done:
+                    state = self.env.reset()
+                    i += 1
+                else:
+                    state = next_state
+                print(f"step {step}", end="\r")
 
-            print(f"{self.epoch:4} rewards {mean_reward.item():13.3f} | policy {torch.stack(policy_losses).mean():12.3f}\
+            self.writer.add_scalar('rl/reward', mean_reward, self.epoch)
+            self.writer.add_scalar('rl/mean_traj_reward', cumulative_reward/n_eval_traj, self.epoch)
+            self.writer.add_scalar('rl/entropy', normal_entropy(covs), self.epoch)
+
+            print(f"{self.epoch:4} rewards {mean_reward.item():13.3f} - {cumulative_reward/n_eval_traj:13.3f} | policy {torch.stack(policy_losses).mean():12.3f}\
              | value {torch.stack(value_losses).mean():12.3f} | σ {np.mean(covs)} | entropy {normal_entropy(covs)}")
 
 

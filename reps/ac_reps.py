@@ -1,7 +1,6 @@
 import os
 
 import torch
-# import numpy as np
 import autograd.numpy as np
 from autograd import grad, jacobian
 from scipy.optimize import minimize
@@ -40,28 +39,23 @@ class ACREPS:
 
         if self.resume or self.eval:
             file = np.load(self.checkpoint_path)
-            self.fourier_features = file['fourier_features']
+            self.fourier_freq, self.fourier_offset = file['fourier_features']
             self.θ = file['θ']
-            # self.σ = file['σ'] if self.resume else 0.0  # zero variance for evaluation
             self.Σ = file['Σ'] if self.resume else np.zeros_like(file['Σ'])  # zero variance for evaluation
             self.α = file['α']
             self.η = file['η']
             self.epoch = file['epoch']
             print(f"LOADED Model at epoch {self.epoch}")
         else:
-            fourier_feature_parameters = []
             if fourier_band is None:
                 # if fourier_band is not set, then set it heuristically.
                 fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
             fourier_band = list(fourier_band)
             fourier_cov = np.eye(len(fourier_band)) / fourier_band
-            for _ in range(n_fourier):
-                freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov)
-                offset = 2 * np.pi * np.random.rand(fourier_dim) - np.pi
-                fourier_feature_parameters.append((freq, offset))
-            self.fourier_features = np.array(fourier_feature_parameters)
+            self.fourier_freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov, n_fourier)
+            self.fourier_offset = 2 * np.pi * np.random.rand(n_fourier, fourier_dim) - np.pi
             self.θ = np.random.randn(n_fourier, self.env.action_space.shape[0])
-            self.Σ = np.array([[16.0**2]])  # TODO: Adapt dimemsion to environment
+            self.Σ = np.array([[16.0**2]])  # TODO: Adapt dimension to environment
             self.α = np.random.randn(n_fourier)
             self.η = np.random.rand()
             self.epoch = 0
@@ -73,19 +67,15 @@ class ACREPS:
         :param state: environment state
         :return: feature vector for state
         """
-        freq = self.fourier_features[:, 0, :]
-        offset = self.fourier_features[:, 1, :]
-        return np.sin(np.sum(freq * (state + offset), axis=-1))
+        return np.sin(np.sum(self.fourier_freq * (state + self.fourier_offset), axis=-1))
 
     def train(self):
         while self.epoch < self.n_epochs or self.eval:
             ############################
             #        SAMPLING          #
             ############################
-
             self.epoch += 1
             states, actions, rewards, dones = [], [], [], []
-
             φ_s = self.φ_fn(self.env.reset())
 
             # Sample trajectories
@@ -112,14 +102,13 @@ class ACREPS:
                 ############################
                 #     DUAL OPTIMIZATION    #
                 ############################
-
+                φ = np.array(states)
                 rewards = np.array(rewards)
                 returns = np.zeros_like(rewards)
                 R = 0
                 for t in reversed(range(len(rewards))):
                     R = rewards[t] + self.γ * R * (1 - dones[t])
                     returns[t] = R
-                φ = np.array(states)
 
                 def dual(p):
                     """dual formulation of the ACREPS objective function"""
@@ -148,21 +137,39 @@ class ACREPS:
                 Φ = np.array(states)
                 a = np.array(actions)
 
-                self.writer.add_scalar('rl/reward', torch.tensor(np.sum(rewards), dtype=torch.float32), self.epoch)
-                self.writer.add_scalar('rl/entropy', torch.tensor(normal_entropy(self.Σ), dtype=torch.float32), self.epoch)
-                self.writer.add_scalar('rl/η', torch.tensor(self.η), self.epoch)
-                self.writer.add_scalar('rl/KL', torch.tensor(self.kl), self.epoch)
-
                 # Update policy parameters
-                self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-9 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
                 z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
-                # self.σ = np.sqrt(np.sum(W @ np.square(a - Φ @ self.θ)) / Z)
+                self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-9 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
                 self.Σ = np.eye(self.env.action_space.shape[0]) * np.sum(W @ np.square(a - Φ @ self.θ), axis=0) / z
 
                 np.savez(self.checkpoint_path, θ=self.θ, α=self.α, η=self.η, Σ=self.Σ,
-                         fourier_features=self.fourier_features, epoch=self.epoch)
+                         fourier_features=(self.fourier_freq, self.fourier_offset), epoch=self.epoch)
 
-            print(f"{self.epoch:4} rewards {np.sum(rewards):13.6f} | KL {self.kl:8.6f} | Σ {self.Σ} | entropy {normal_entropy(self.Σ)}")
+            # Evaluate the deterministic policy
+            n_eval_traj = 25
+            cumulative_reward = 0
+            i = 0
+            φ_s = self.φ_fn(self.env.reset())
+            while i < n_eval_traj:
+                action = np.random.multivariate_normal(mean=φ_s.T@self.θ, cov=np.zeros_like(self.Σ))
+                next_state, reward, done, _ = self.env.step(action)
+                cumulative_reward += reward
+                if done:
+                    φ_s = self.φ_fn(self.env.reset())
+                    i += 1
+                else:
+                    φ_s = self.φ_fn(next_state)
+                print(f"step {step}", end="\r")
+
+            self.writer.add_scalar('rl/reward', torch.tensor(np.sum(rewards), dtype=torch.float32), self.epoch)
+            self.writer.add_scalar('rl/mean_traj_reward', cumulative_reward / n_eval_traj, self.epoch)
+            self.writer.add_scalar('rl/entropy', torch.tensor(normal_entropy(self.Σ), dtype=torch.float32), self.epoch)
+            self.writer.add_scalar('rl/η', torch.tensor(self.η), self.epoch)
+            self.writer.add_scalar('rl/KL', torch.tensor(self.kl), self.epoch)
+
+            print(f"{self.epoch:4} rewards {np.sum(rewards):13.6f} - {cumulative_reward/n_eval_traj:13.6f} | \
+            KL {self.kl:8.6f} | Σ {self.Σ} | entropy {normal_entropy(self.Σ)}")
+
 
 
 def normal_entropy(Σ):
