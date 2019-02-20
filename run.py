@@ -33,7 +33,7 @@ def run_single_experiment(args=None):
 
     # seed gym env if seed is given
     if args['seed'] is not None:
-        args['env'].seed(args.seed)
+        args['env'].seed(args["seed"])
         print(f'# Seeded Env. Seed={args["seed"]}')
 
     # select, instantiate and train correct algorithm
