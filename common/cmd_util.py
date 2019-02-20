@@ -20,7 +20,7 @@ class ArgumentParser:
         parser.add_argument('--env', type=str, required=True, help='name of the environment to be learned')
         parser.add_argument('--robot', action='store_true', help='run the experiment using the real robot environment')
 
-        parser.add_argument('--n_epochs', type=int, default=50, help='number of training epochs')
+        parser.add_argument('--n_epochs', type=int, default=400, help='number of training epochs')
         parser.add_argument('--n_steps', type=int, default=3000, help='number of environment steps per epoch')
         parser.add_argument('--seed', type=int, help='seed for torch/numpy/gym to make experiments reproducible')
 

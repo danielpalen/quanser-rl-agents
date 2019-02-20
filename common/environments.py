@@ -19,11 +19,13 @@ environments = {
     },
 
     'stab': {
-        'sim':   'CartpoleStabShort-v0',
+        'sim':   'CartpoleStabLong-v0',
+        # 'sim':   'CartpoleStabShort-v0',
         'robot': 'CartpoleStabShortRR-v0'
     },
 
     'swingup': {
+        # 'sim':   'CartpoleSwingLong-v0',
         'sim':   'CartpoleSwingShort-v0',
         'robot': 'CartpoleSwingRR-v0'
     },
