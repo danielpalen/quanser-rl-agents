@@ -38,7 +38,10 @@ def run_single_experiment(args=None):
 
     # select, instantiate and train correct algorithm
     model = {'REPS': REPS, 'ACREPS': ACREPS, 'PPO': PPO}[args['algorithm']](**args)
-    model.train()
+    if args['eval']:
+        model.evaluate(100)
+    else:
+        model.train()
     args['env'].close()
 
 
