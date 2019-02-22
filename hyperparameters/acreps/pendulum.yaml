@@ -1,0 +1,10 @@
+# ACREPS - pendulum
+params:
+  n_steps: 3000
+
+  gamma: 0.9
+  epsilon: 0.1
+  sigma: 16.0
+
+  n_fourier: 75
+  fourier_band: [0.5, 0.5, 4.0]
