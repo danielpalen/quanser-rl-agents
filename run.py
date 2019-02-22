@@ -7,7 +7,7 @@ import quanser_robots
 from common.cmd_util import ArgumentParser
 from common.environments import get_env_name
 from reps.reps import REPS
-from reps.ac_reps import ACREPS
+from reps.acreps import ACREPS
 from ppo.ppo import PPO
 
 
