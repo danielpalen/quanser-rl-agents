@@ -156,7 +156,6 @@ class ACREPS:
         if fourier_band is None:
             # if fourier_band is not set, then set it heuristically.
             fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
-        fourier_band = list(fourier_band)
         print('fourier_band', fourier_band)
         fourier_cov = np.linalg.inv(np.diag(fourier_band))
         fourier_dim = self.env.action_space.shape[0]
