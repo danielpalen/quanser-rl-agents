@@ -102,15 +102,10 @@ class ACREPS:
             #      FIT NEW POLICY      #
             ############################
             δ = returns - self.α.dot(φ.T)
-            ω = np.expand_dims(np.exp(δ / self.η), axis=-1)
-            # The KL can be computed by looking at the weights ω only
-            ω_ = ω / np.mean(ω)
-            kl = np.mean(ω_ * np.log(ω_))
-
-            W = np.eye(len(ω)) * ω
+            ω = np.exp(δ / self.η)
+            W = np.diag(ω)
             Φ = np.array(states)
             a = np.array(actions)
-
             # Update policy parameters
             z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
             self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-9 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
@@ -121,6 +116,9 @@ class ACREPS:
             n_eval_traj = 25
             _, mean_traj_reward = self.evaluate(n_eval_traj)
             entropy = normal_entropy(self.Σ)
+            # The KL can be computed by looking at the weights ω only
+            ω_ = ω / np.mean(ω)
+            kl = np.mean(ω_ * np.log(ω_))
             save_tb_scalars(self.writer, self.epoch, reward=np.sum(rewards), mean_traj_reward=mean_traj_reward,
                             entropy=entropy, η=self.η, kl=kl)
 
@@ -160,7 +158,7 @@ class ACREPS:
             fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
         fourier_band = list(fourier_band)
         print('fourier_band', fourier_band)
-        fourier_cov = np.eye(len(fourier_band)) / fourier_band
+        fourier_cov = np.linalg.inv(np.diag(fourier_band))
         fourier_dim = self.env.action_space.shape[0]
         self.fourier_freq = np.random.multivariate_normal(np.zeros_like(fourier_band), fourier_cov, n_fourier)
         self.fourier_offset = 2 * np.pi * np.random.rand(n_fourier, self.env.observation_space.shape[0]) - np.pi
