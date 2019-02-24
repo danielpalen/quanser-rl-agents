@@ -54,20 +54,16 @@ class PPO:
         if self.eval or self.resume:
             self.load_model()
 
-        if self.training:
-            self.policy.train()
-            self.V.train()
-        else:
-            self.policy.eval()
-            self.V.eval()
 
     def train(self):
         """
         Trains the PPO agent.
         """
 
-        while self.epoch < self.n_epochs or self.eval:
+        while self.epoch < self.n_epochs:
             self.epoch += 1
+            self.policy.train()
+            self.V.train()
             state = self.env.reset()
             states, next_states, actions, log_probs, covs, rewards, values, dones = [], [], [], [], [], [], [], []
 
@@ -179,6 +175,8 @@ class PPO:
         :param n_trajectories: number of trajectories to use for the evaluation.
         :return (cumulative_reward, mean_traj_reward):
         """
+        self.policy.eval()
+        self.V.eval()
         cumulative_reward = 0
         trajectory = 0
         state = self.env.reset()

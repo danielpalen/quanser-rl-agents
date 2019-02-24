@@ -13,7 +13,7 @@ def main():
     parser.add_argument('--algo', type=str, required=True, help='algorithm to use [ACREPS,PPO]')
     parser.add_argument('--name', type=str, required=True, help='identifier to store experiment results')
     parser.add_argument('--env', type=str, required=True, help='name of the environment to be learned')
-    parser.add_argument('--n_parallel', type=int, default=8, required=True, help='name of the environment to be learned')
+    parser.add_argument('--n_parallel', type=int, default=13, help='name of the environment to be learned')
 
     args = parser.parse_args()
     print(args)

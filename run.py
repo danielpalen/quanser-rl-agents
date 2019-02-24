@@ -45,9 +45,11 @@ def run_single_experiment(args=None):
     print()
 
     # crete gym env
+    args['robot'] = args['robot'] if 'robot' in args else False
     args['env'] = gym.make(get_env_name(args['env'], sim=not args['robot']))
 
     # seed gym env if seed is given
+    args['seed'] = args['seed'] if 'seed' in args else None
     if args['seed'] is not None:
         args['env'].seed(args["seed"])
         print(f'# Seeded Env. Seed={args["seed"]}')
