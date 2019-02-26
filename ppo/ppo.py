@@ -184,6 +184,8 @@ class PPO:
             action, _, _ = self.policy.select_action(state, deterministic=True)
             next_state, reward, done, _ = self.env.step(action)
             cumulative_reward += reward
+            if self.render:
+                self.env.render()
             if done:
                 state = self.env.reset()
                 trajectory += 1
