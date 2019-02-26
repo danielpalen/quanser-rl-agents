@@ -1,0 +1,16 @@
+params:
+  env: 'furuta'
+  algorithm: 'PPO'
+
+  n_epochs: 400
+  n_steps: 3000
+
+  gamma: 0.9
+  p_lr: 7.e-4
+  v_lr: 7.e-4
+  n_mb_epochs: 10
+  mb_size: 128
+  clip: 0.2
+
+  gae: False
+  lam: 0.99
