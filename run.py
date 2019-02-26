@@ -26,8 +26,12 @@ def run_single_experiment(args=None):
             print('DEFAULTS')
             pprint(params)
 
-        args.summary_path = os.path.join('out', 'summary', args.name)
-        args.checkpoint_path = os.path.join('out', 'models', args.name)
+        if args.experiment:
+            args.summary_path = os.path.join('out', 'experiments', '_'.join(args.name.split('_')[:-1]), 'summary', args.name)
+            args.checkpoint_path = os.path.join('out', 'experiments', '_'.join(args.name.split('_')[:-1]), 'models', args.name)
+        else:
+            args.summary_path = os.path.join('out', 'summary', args.name)
+            args.checkpoint_path = os.path.join('out', 'models', args.name)
 
         # make sure the necessary directories exist
         os.makedirs(args.summary_path, exist_ok=True)
@@ -43,6 +47,16 @@ def run_single_experiment(args=None):
     print('ARGUMENTS')
     pprint(args)
     print()
+
+    if not args['resume'] and not args['eval']:
+        # save arguments
+        params_path = os.path.join(args['checkpoint_path'], 'params.yaml')
+        with open(params_path, 'w') as outfile:
+            yaml.dump({'params' : args}, outfile, default_flow_style=None)
+            print('saved args! location:', os.path.join(args['checkpoint_path'], 'params.yaml'))
+    #else:
+        # TODO: should we overwrite command line args with previous values?
+        # load arguments from previous run
 
     # crete gym env
     args['robot'] = args['robot'] if 'robot' in args else False
