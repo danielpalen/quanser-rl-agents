@@ -25,6 +25,7 @@ class ArgumentParser:
         parser.add_argument('--seed', type=int, help='seed for torch/numpy/gym to make experiments reproducible')
 
         parser.add_argument('--render', action='store_true', help='render the environment')
+        parser.add_argument('--experiment', action='store_true', help='whether this experiment was run via experiment.py')
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--eval', action='store_true', help='toggles evaluation mode')
@@ -73,6 +74,6 @@ class ArgumentParser:
             raise Exception('No algorithm specified! The first argument ')
 
         args.algo = args.command
-        args.name = f"{args.algo}_{args.name}"
+        # args.name = f"{args.algo}_{args.name}"
         del args.command
         return args
