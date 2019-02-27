@@ -48,6 +48,12 @@ def run_single_experiment(args=None):
     pprint(args)
     print()
 
+
+    args['eval'] = args['eval'] if 'eval' in args else False
+    args['resume'] = args['resume'] if 'resume' in args else False
+    args['robot'] = args['robot'] if 'robot' in args else False
+    args['seed'] = args['seed'] if 'seed' in args else None
+
     if not args['resume'] and not args['eval']:
         # save arguments
         params_path = os.path.join(args['checkpoint_path'], 'params.yaml')
@@ -59,11 +65,9 @@ def run_single_experiment(args=None):
         # load arguments from previous run
 
     # crete gym env
-    args['robot'] = args['robot'] if 'robot' in args else False
     args['env'] = gym.make(get_env_name(args['env'], sim=not args['robot']))
 
     # seed gym env if seed is given
-    args['seed'] = args['seed'] if 'seed' in args else None
     if args['seed'] is not None:
         args['env'].seed(args["seed"])
         print(f'# Seeded Env. Seed={args["seed"]}')
