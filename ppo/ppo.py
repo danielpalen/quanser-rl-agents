@@ -161,15 +161,21 @@ class PPO:
                     value_losses.append(value_loss)
             self.save_model()
 
-            # Evaluate the deterministic policy
-            n_eval_traj = 25
-            _, mean_traj_reward = self.evaluate(n_eval_traj)
-            entropy = normal_entropy(covs)
-            save_tb_scalars(self.writer, self.epoch, reward=rewards.sum(), mean_traj_reward=mean_traj_reward,
-                            entropy=entropy, policy_loss=torch.stack(policy_losses).mean(),
-                            value_loss=torch.stack(value_losses).mean())
+            if self.epoch%10==0:
+                # Evaluate the deterministic policy
+                n_eval_traj = 25
+                _, mean_traj_reward = self.evaluate(n_eval_traj)
+                entropy = normal_entropy(covs)
+                save_tb_scalars(self.writer, self.epoch, reward=rewards.sum(), mean_traj_reward=mean_traj_reward,
+                                entropy=entropy, policy_loss=torch.stack(policy_losses).mean(),
+                                value_loss=torch.stack(value_losses).mean())
+            else:
+                entropy = normal_entropy(covs)
+                save_tb_scalars(self.writer, self.epoch, reward=rewards.sum(), entropy=entropy,
+                                policy_loss=torch.stack(policy_losses).mean(),
+                                value_loss=torch.stack(value_losses).mean())
 
-    def evaluate(self, n_trajectories):
+    def evaluate(self, n_trajectories, print_reward=False):
         """
         Evaluate the deterministic policy for N full trajectories.
         :param n_trajectories: number of trajectories to use for the evaluation.
@@ -179,19 +185,36 @@ class PPO:
         self.V.eval()
         cumulative_reward = 0
         trajectory = 0
+        traj_rewards = []
+        traj_reward = 0
+        step = 0
         state = self.env.reset()
-        while trajectory < n_trajectories:
+        while len(traj_rewards) < n_trajectories:
+            step += 1
             action, _, _ = self.policy.select_action(state, deterministic=True)
             next_state, reward, done, _ = self.env.step(action)
             cumulative_reward += reward
+            traj_reward += reward
             if self.render:
                 self.env.render()
             if done:
+                print(step)
+                step = 0
                 state = self.env.reset()
                 trajectory += 1
+                traj_rewards.append(traj_reward)
+                traj_reward = 0
+                if print_reward:
+                    print(traj_rewards)
+                    print('cummulative', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
+                          'max', np.max(traj_rewards))
+                    print()
             else:
                 state = next_state
         mean_traj_reward = cumulative_reward / n_trajectories
+        if print_reward:
+            print('cummulative', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
+            print()
         return cumulative_reward, mean_traj_reward
 
     def load_model(self):
