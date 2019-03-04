@@ -76,7 +76,7 @@ def run_single_experiment(args=None):
     model = {'REPS': REPS, 'ACREPS': ACREPS, 'PPO': PPO}[args['algo'].upper()](**args)
     print(model)
     if 'eval' in args and args['eval']:
-        model.evaluate(100)
+        model.evaluate(25, print_reward=True)
     else:
         model.train()
     args['env'].close()
