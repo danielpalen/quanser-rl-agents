@@ -69,7 +69,7 @@ class PPO:
 
             for step in range(self.n_steps):
                 action, log_prob, Σ = self.policy.select_action(state)
-                state_, reward, done, _ = self.env.step(self.reshape_action(action))
+                state_, reward, done, _ = self.env.step(action)
 
                 if self.render:
                     self.env.render()
@@ -169,14 +169,6 @@ class PPO:
                             entropy=entropy, policy_loss=torch.stack(policy_losses).mean(),
                             value_loss=torch.stack(value_losses).mean())
 
-    def reshape_action(self, action):
-        new_action = np.copy(action)
-        for i in range(action.shape[0]):
-            sign = -1 if action[i] < 0 else 1
-            new_action[i] = sign * max(np.abs(action[i]), 0.52360)
-        #print(f"Action reshape: {action} -> {new_action}")
-        return new_action
-
     def evaluate(self, n_trajectories):
         """
         Evaluate the deterministic policy for N full trajectories.
@@ -252,7 +244,7 @@ class PolicyNetwork(nn.Module):
         x = torch.tanh(self.h1(state))
         x = torch.tanh(self.h2(x))
         μ = self.action_scaling * torch.tanh(self.action_mu(x))
-        σ = 40 * F.softplus(self.action_sig(x)) + 1e-12  # make sure we never predict zero variance.
+        σ = 10 * F.softplus(self.action_sig(x)) + 1e-12  # make sure we never predict zero variance.
         return μ, σ
 
     def select_action(self, state, deterministic=False):
