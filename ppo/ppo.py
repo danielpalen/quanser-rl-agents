@@ -13,13 +13,36 @@ from common.common import save_tb_scalars
 
 
 class PPO:
-    """
-    Proximal Policy Optimization based on https://arxiv.org/abs/1707.06347
-    """
 
     def __init__(self, *, name, env, n_epochs=100, n_steps=3000, gamma=0.9, p_lr=7e-4, v_lr=7e-4, n_mb_epochs=5,
                  mb_size=64, clip=0.2, td=False, gae=False, lam=0.99, render=False, resume=False, eval=False, seed=None,
                  summary_path=None, checkpoint_path=None, **kwargs):
+        """
+        Proximal Policy Optimization based on https://arxiv.org/abs/1707.06347
+
+        :param name: experiment name for checkpointing
+        :param env: instance of OpenAI gym environment
+        :param n_epochs: number of training epochs
+        :param n_steps: number of environment steps per training epoch
+        :param gamma: discount factor for return calculation
+        :param p_lr: learning rate for the policy network
+        :param v_lr: learning rate for the value network
+        :param n_mb_epochs: number of mini batch update epochs
+        :param mb_size: size of the mini batches
+        :param clip: clipping factor used in the PPO objective function
+        :param td: if True returns will be calculated using Temporal Difference otherwise Monte Carlo estimates
+                   will be used.
+        :param gae: if True the advantage will be calculated via Generalized Advantage Estimation otherwise
+                    (return-value) will be used.
+        :param lam: λ hyperparameter used by the Generalized Advantage Estimation algorithm,
+        :param render: renders the environment.
+        :param resume: loads the last checkpoint to continue to train.
+        :param eval: loads the last checkpoint to perform evaluation of the deterministic policy afterwards..
+        :param seed: optional seed.
+        :param summary_path: path at which tensorboard summary files are saved.
+        :param checkpoint_path: path at which model checkpoints are saved and loaded.
+        :param kwargs: Helper to catch unused arguments supplied by the argument parser in run.py
+        """
 
         if seed is not None:
             torch.manual_seed(seed)
@@ -56,9 +79,7 @@ class PPO:
 
 
     def train(self):
-        """
-        Trains the PPO agent.
-        """
+        """Trains the PPO agent."""
 
         while self.epoch < self.n_epochs:
             self.epoch += 1
