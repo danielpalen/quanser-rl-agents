@@ -9,6 +9,24 @@ from run import run_single_experiment
 
 
 def main():
+    """
+    This method is a helper function that is used to run a single algorithm multiple times.
+    It can be configured and uses multiple processes for the different training runs so everything
+    can run in parallel.
+
+    It parses 3 required arguments from the command line.
+    algo - the algorithm that should be used [REPS,ACREPS,PPO]
+    name - name of the experiment
+    env  - name of the environment that should be used.
+
+    Upon first execution a file will be created located at ./out/experiments/[name]/parameters.yaml
+    IMPORTANT: This file has to be filled with the parameters that are required for running the experiment.
+    To figure out which parameters are required you can look at the required arguments for instantiating the
+    desired algorithm, e.g. for REPS look at the REPS class and the require parameters to instantiate it.
+
+    After preparing the yaml file the experiments.py command can be executed again and the experiments will run.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--algo', type=str, required=True, help='algorithm to use [ACREPS,PPO]')
     parser.add_argument('--name', type=str, required=True, help='identifier to store experiment results')

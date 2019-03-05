@@ -66,6 +66,11 @@ For evaluation and visualization of the learning, install tensorboardX, which is
 
 ```pip install tensorboardX```
 
+### Other requirements
+- joblib
+- yaml
+- ...
+
 ### Installing the learning algorithms
 
 ```git clone https://github.com/danielpalen/rl-research-lab-class.git```

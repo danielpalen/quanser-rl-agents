@@ -12,6 +12,16 @@ from ppo.ppo import PPO
 
 
 def run_single_experiment(args=None):
+    """
+    This method is the main entry point for running an experiment. It trys to set everything up,
+    instantiate a model and train and/or evaluate a model.
+
+    If no args dictionary is supplied the arguemnt parser will try to parse all
+    necessary arguments from the command line and combine them with the default
+    arguments that are located in ./hyperparameters/[algorithm]/[environment].yaml.
+
+    :param args: dictionary of arguments that is used to set up everything including the model.
+    """
 
     # if no arguments have been passed, then load defaults and parse them
     if args is None:
