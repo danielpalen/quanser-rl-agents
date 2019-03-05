@@ -69,13 +69,13 @@ class PPO:
 
             for step in range(self.n_steps):
                 action, log_prob, Σ = self.policy.select_action(state)
-                state_, reward, done, _ = self.env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
 
                 if self.render:
                     self.env.render()
 
                 states.append(state)
-                next_states.append(state_)
+                next_states.append(next_state)
                 actions.append(action)
                 log_probs.append(log_prob)
                 covs.append(Σ.numpy())
@@ -85,7 +85,7 @@ class PPO:
                 if done:
                     state = self.env.reset()
                 else:
-                    state = state_
+                    state = next_state
                 print(f"step {step}", end="\r")
 
             states = torch.tensor(states, dtype=torch.float32)
@@ -178,6 +178,7 @@ class PPO:
     def evaluate(self, n_trajectories, print_reward=False):
         """
         Evaluate the deterministic policy for N full trajectories.
+
         :param n_trajectories: number of trajectories to use for the evaluation.
         :return (cumulative_reward, mean_traj_reward):
         """
@@ -218,9 +219,7 @@ class PPO:
         return cumulative_reward, mean_traj_reward
 
     def load_model(self):
-        """
-        Loads a model checkpoint
-        """
+        """Loads a model checkpoint"""
         checkpoint = torch.load(self.checkpoint_path)
         self.policy.load_state_dict(checkpoint['model_state_dict'])
         self.V.load_state_dict(checkpoint['model_v_state_dict'])
@@ -230,9 +229,7 @@ class PPO:
         print(f"-> LOADED MODEL at epoch {self.epoch}")
 
     def save_model(self):
-        """
-        Saves model checkpoint
-        """
+        """Saves model checkpoint"""
         model_states = {
             'epoch': self.epoch,
             'model_state_dict': self.policy.state_dict(),
@@ -244,13 +241,12 @@ class PPO:
 
 
 class PolicyNetwork(nn.Module):
-    """
-    Policy network for PPO. This network predicts the parameters
-    for a gaussian policy, i.e. mean and variance.
-    """
 
     def __init__(self, env, n_neurons=64):
         """
+        Policy network for PPO. This network predicts the parameters
+        for a gaussian policy, i.e. mean and variance.
+
         :param env: gym environment needed to look at the observation space and action space size
         :param n_neurons: number of neurons in the hidden layers.
         """
@@ -290,12 +286,11 @@ class PolicyNetwork(nn.Module):
 
 
 class ValueNetwork(nn.Module):
-    """
-    Value function network.
-    """
 
     def __init__(self, env, n_neurons = 64):
         """
+        Value Function Network
+
         :param env: gym environment needed to look at the observation space size
         :param n_neurons: number of neurons in the hidden layers.
         """
