@@ -121,14 +121,12 @@ class PPO:
             if self.td:
                 # Temporal Difference
                 with torch.no_grad():
-                    # returns = normalized_rewards + γ * V(next_states)
                     returns = rewards + self.γ * self.V(next_states)
             else:
                 # Monte Carlo
                 R = self.V.get_value(state)
                 returns = torch.zeros(self.n_steps)
                 for t in reversed(range(self.n_steps)):
-                    # R = normalized_rewards[t] + (1-dones[t]) * γ * R
                     R = rewards[t] + (1 - dones[t]) * self.γ * R
                     returns[t] = R
                 returns = returns.view(-1, 1)
