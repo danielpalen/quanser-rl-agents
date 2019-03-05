@@ -10,14 +10,31 @@ from common.common import save_tb_scalars, gaussian_policy as π
 
 
 class ACREPS:
-    """
-    Actor-Critic Relative Entropy Policy Search based on
-    https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247
-    """
 
     def __init__(self, *, name, env, n_epochs=50, n_steps=3000, gamma=0.99, epsilon=0.1, sigma=16.0, n_fourier=75,
                  fourier_band=None, render=False, resume=False, eval=False, seed=None, summary_path=None,
                  checkpoint_path=None, **kwargs):
+        """
+        Actor-Critic Relative Entropy Policy Search based on
+        https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247
+
+        :param name: experiment name for checkpointing
+        :param env: instance of OpenAI gym environment
+        :param n_epochs: number of training epochs
+        :param n_steps: number of environment steps per training epoch
+        :param gamma: discount factor used when calculating the return.
+        :param epsilon: Kullback-Leibler divergence bound ε.
+        :param sigma: standard deviation of the current policy.
+        :param n_fourier: number of fourier features to used for the model.
+        :param fourier_band: bandwidth to use for the covariance matrix of the fourier features.
+        :param render: renders the environment.
+        :param resume: loads the last checkpoint to continue to train.
+        :param eval: loads the last checkpoint to perform evaluation of the deterministic policy afterwards..
+        :param seed: optional seed.
+        :param summary_path: path at which tensorboard summary files are saved.
+        :param checkpoint_path: path at which model checkpoints are saved and loaded.
+        :param kwargs: Helper to catch unused arguments supplied by the argument parser in run.py
+        """
 
         if seed is not None:
             np.random.seed(seed)
@@ -164,6 +181,7 @@ class ACREPS:
         return np.sin(np.sum(self.fourier_freq * (state + self.fourier_offset), axis=-1))
 
     def initialize_model(self, n_fourier, fourier_band, sigma):
+        """Initialize model parameters."""
         if fourier_band is None:
             # if fourier_band is not set, then set it heuristically.
             fourier_band = np.clip(self.env.observation_space.high, -10, 10) / 2.0
