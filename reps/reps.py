@@ -22,14 +22,14 @@ class REPS:
         :param epsilon: Kullback-Leibler divergence bound ε.
         :param sigma: standard deviation of the current policy.
         :param n_fourier: number of fourier features to used for the model.
-        :param fourier_band: bandwidth to use for the covariane matrix of the fourier features.
+        :param fourier_band: bandwidth to use for the covariance matrix of the fourier features.
         :param render: renders the environment.
         :param resume: loads the last checkpoint to continue to train.
-        :param eval: loads the last checkpoint to perfrom evaluation of the deterministiv policy afterwards..
+        :param eval: loads the last checkpoint to perform evaluation of the deterministic policy afterwards..
         :param seed: optional seed.
         :param summary_path: path at which tensorboard summary files are saved.
         :param checkpoint_path: path at which model checkpoints are saved and loaded.
-        :param kwargs: Helper to catch unused arguemnts supplied by the argument parser in run.py
+        :param kwargs: Helper to catch unused arguments supplied by the argument parser in run.py
         """
 
         if seed is not None:
