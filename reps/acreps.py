@@ -91,7 +91,7 @@ class ACREPS:
                 V_s = np.dot(α, φ.T)
                 δ = returns - V_s
                 max_δ = np.max(δ)
-                return η*self.ε + max_δ + η*np.log(np.mean(np.exp((δ-max_δ)/η))) + np.mean(V_s) + 1e-9*np.linalg.norm(α, 2)
+                return η*self.ε + max_δ + η*np.log(np.mean(np.exp((δ-max_δ)/η))) + np.mean(V_s) + 1.e-16*np.linalg.norm(α, 2)
 
             params = np.concatenate([np.array([self.η]), self.α])
             bounds = [(1e-8, None)] + [(None, None)] * len(self.α)  # bounds for η and α
@@ -108,21 +108,26 @@ class ACREPS:
             a = np.array(actions)
             # Update policy parameters
             z = (np.square(np.sum(ω)) - np.sum(np.square(ω))) / np.sum(ω)
-            self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1e-9 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
+            self.θ = np.linalg.solve(Φ.T @ W @ Φ + 1.e-16 * np.eye(Φ.shape[-1]), Φ.T @ W @ a)
             self.Σ = np.eye(self.env.action_space.shape[0]) * np.sum(W @ np.square(a - Φ @ self.θ), axis=0) / z
             self.save_model()
 
-            # Evaluate the deterministic policy
-            n_eval_traj = 25
-            _, mean_traj_reward = self.evaluate(n_eval_traj)
-            entropy = normal_entropy(self.Σ)
             # The KL can be computed by looking at the weights ω only
             ω_ = ω / np.mean(ω)
             kl = np.mean(ω_ * np.log(ω_))
-            save_tb_scalars(self.writer, self.epoch, reward=np.sum(rewards), mean_traj_reward=mean_traj_reward,
-                            entropy=entropy, η=self.η, kl=kl)
 
-    def evaluate(self, n_trajectories):
+            if self.epoch%10==0:
+                # Evaluate the deterministic policy
+                n_eval_traj = 25
+                _, mean_traj_reward = self.evaluate(n_eval_traj)
+                entropy = normal_entropy(self.Σ)
+                save_tb_scalars(self.writer, self.epoch, reward=np.sum(rewards), mean_traj_reward=mean_traj_reward,
+                                entropy=entropy, η=self.η, kl=kl)
+            else:
+                entropy = normal_entropy(self.Σ)
+                save_tb_scalars(self.writer, self.epoch, reward=np.sum(rewards), entropy=entropy, η=self.η, kl=kl)
+
+    def evaluate(self, n_trajectories, print_reward=False):
         """
         Evaluate the deterministic policy for N full trajectories.
         :param n_trajectories: number of trajectories to use for the evaluation.
@@ -130,18 +135,24 @@ class ACREPS:
         """
         total_reward, trajectory = 0, 0
         φ_s = self.φ_fn(self.env.reset())
+        step = 0
         while trajectory < n_trajectories:
+            step += 1
             action = π(φ_s, θ=self.θ, Σ=self.Σ, deterministic=True)
             next_state, reward, done, _ = self.env.step(action)
             total_reward += reward
             if self.render:
                 self.env.render()
             if done:
+                print(step)
+                step = 0
                 trajectory += 1
                 φ_s = self.φ_fn(self.env.reset())
             else:
                 φ_s = self.φ_fn(next_state)
         mean_traj_reward = total_reward / n_trajectories
+        if print_reward:
+            print('cummulative', total_reward, 'mean', mean_traj_reward)
         return total_reward, mean_traj_reward
 
     def φ_fn(self, state):
