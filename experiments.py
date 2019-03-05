@@ -29,7 +29,7 @@ def main():
             args.n_experiments = 25
             yaml.dump({'params': vars(args)}, params_file, default_flow_style=False)
             print("HINT: In order to run experiments you have to add hyperparameter settings to the file"
-                  f" ./{experiments_path}.yaml "
+                  f" ./{experiments_path}/parameters.yaml "
                   "containing the experiments hyperparameters. The folder structure has already been created for you")
     else:
         with open(parameters_path) as f:
