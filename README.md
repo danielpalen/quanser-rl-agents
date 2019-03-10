@@ -12,7 +12,7 @@ In practice they were only tested on the following environments:
 - Furuta Pendulum
 - Ball Ballancer
 
-The last three are custom gym environments implemented in the quansar robots repository.
+The last three are custom gym environments implemented in the quansar_robots repository.
 
 ## Repository Structure
 /quanser-rl-agents
@@ -23,8 +23,34 @@ The last three are custom gym environments implemented in the quansar robots rep
 * /common
 * /hyperparameters
 * /out
-* experiments.py
-* run.py
+* experiments.py - convenience method to run multiple experiments with the same settings in parallel processes.
+* run.py - main entry point for all training and evaluation tasks.
+
+## Training and Running Models
+The main entry point of this repository is the `run.py` file. It comes with a sophisticated command-line parser and
+special subparsers for each algorithm implemented in this repository.
+The basic syntax is:
+```
+python run.py [general arguments] (ACREPS|REPS|PPO) [algorithm specific arguments]
+```
+More information on required and on optional commands can be explored by running `python run.py -h`.
+Which returns
+```
+python run.py [-h] --name NAME --env ENV [--robot] [--n_epochs N_EPOCHS]
+              [--n_steps N_STEPS] [--seed SEED] [--render] [--experiment]
+              [--eval | --resume]
+              {REPS,ACREPS,PPO}
+```
+For information on algorithm specific commands the ``-h`` can executed on the subcommands `{ACREPS,REPS,PPO}`,
+e.g. ``python run.py REPS -h`` to get more information training the REPS algorithm.
+
+The most basic command for running REPS on the underactuated pendulum swingup would be
+```
+python run.py --name reps_pendulum --env pendulum REPS
+```
+
+#### Visualising Training with TensorBoard
+TODO: Explain where tensorboard files get saved and how to open them.
 
 ## Installation
 
