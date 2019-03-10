@@ -209,14 +209,21 @@ class PPO:
         traj_reward = 0
         step = 0
         state = self.env.reset()
+
+        actions = []
+        states = []
+
         while len(traj_rewards) < n_trajectories:
             step += 1
             action, _, _ = self.policy.select_action(state, deterministic=True)
+            states.append(state)
+            actions.append(action)
             next_state, reward, done, _ = self.env.step(action)
             cumulative_reward += reward
             traj_reward += reward
             if self.render:
                 self.env.render()
+            # state = next_state
             if done:
                 print(step)
                 step = 0
@@ -226,15 +233,20 @@ class PPO:
                 traj_reward = 0
                 if print_reward:
                     print(traj_rewards)
-                    print('cummulative', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
+                    print('total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
                           'max', np.max(traj_rewards))
+                    #print('states', states)
+                    #print('actions', actions)
                     print()
+                states = []
+                actions = []
             else:
                 state = next_state
         mean_traj_reward = cumulative_reward / n_trajectories
         if print_reward:
-            print('cummulative', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
+            print('total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
             print()
+
         return cumulative_reward, mean_traj_reward
 
     def load_model(self):
