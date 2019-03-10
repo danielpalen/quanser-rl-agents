@@ -14,6 +14,18 @@ In practice they were only tested on the following environments:
 
 The last three are custom gym environments implemented in the quansar robots repository.
 
+## Repository Structure
+/quanser-rl-agents
+* /agents
+    * acreps.py
+    * reps.py
+    * ppo.py
+* /common
+* /hyperparameters
+* /out
+* experiments.py
+* run.py
+
 ## Installation
 
 In order to run the code provided, follow these steps to install the necessary components.
