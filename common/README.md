@@ -1,0 +1,1 @@
+This folder contains some code that is shaed between agents and used in general parts of the implementation.
