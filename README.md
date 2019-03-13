@@ -6,12 +6,8 @@ The algorihtms implemented are:
 - [Actor-Critic Relative Entropy Policy Search (ACREPS)](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247)
 - [Proximal Policy Optimization (PPO)](https://arxiv.org/abs/1707.06347)
 
-In practice they were only tested on the following environments:
-- Pendulum Swingup
-- Double Cartpole
-- Furuta Pendulum
-- Ball Ballancer
-
+In practice they were only tested on the following environments: \
+`Pendulum Swingup`, `Double Cartpole`, `Furuta Pendulum`, `Ball Ballancer` \
 The last three are custom gym environments implemented in the quansar_robots repository.
 
 ## Repository Contents
@@ -48,8 +44,47 @@ The most basic command for running REPS on the underactuated pendulum swingup wo
 python run.py --name reps_pendulum --env pendulum REPS
 ```
 
+#### Training with Custom Hyperparameter Settings
+By default a default set of hyperparameters is loaded from `hyperparameters/[algorithm]/[environoment].yaml`.
+But each of the algorithms' sub commands `(REPS|ACREPS|PPO)` can take custom hyperparameter commands.
+To figure out the available hyperparameters that can be set the `-h` flag can be run on the algorhtms subcommand,
+e.g. `python run.py REPS -h` returns:
+```
+usage: run.py REPS [-h] [--epsilon EPSILON] [--gamma GAMMA]
+                   [--n_fourier N_FOURIER]
+                   [--fourier_band FOURIER_BAND [FOURIER_BAND ...]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --epsilon EPSILON     KL constraint.
+  --gamma GAMMA         1 minus environment reset probability.
+  --n_fourier N_FOURIER
+                        number of fourier features.
+  --fourier_band FOURIER_BAND [FOURIER_BAND ...]
+                        number of fourier features.
+```
+Training REPS on the pendulum with a cusom gamma and more fourier features is as easy as
+```
+python run.py --name reps_pendulum --env pendulum REPS --gamma 0.9 --n_fourier 200
+```
+
+#### Resume Training
+Experiments can be stopped during the training process and resumed afterwards by using the `--resume` flag.
+TODO: more explaination
+
+#### Evaluating Experiments
+Trained Models can be evaluated using the `--eval` flag.
+TODO: more explaination
+
 #### Visualising Training with TensorBoard
-TODO: Explain where tensorboard files get saved and how to open them.
+Different scalar values that occure during the training process are saved into tensorboard files automatically.
+These files are either located in `out/summary/[experiment_name]` or in `out/experiments/[experiment_name]/summary`
+depending on whether the experiment was invoced via `run.py` or `experiments.py`. Usually however experiemnts will
+be located in the first of both locations.
+To start a tensorboard that loads all experiments invoced via `run.py` just execute:
+```
+tensorboard --logdir=out/summary
+```
 
 ## Installation
 
@@ -113,6 +148,3 @@ For evaluation and visualization of the learning, install tensorboardX, which is
 ```git clone https://github.com/danielpalen/rl-research-lab-class.git```
 
 Now you are all set to train a model or evaluate an algorithm.
-
-## Run Experiments
-...
