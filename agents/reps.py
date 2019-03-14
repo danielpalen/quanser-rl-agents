@@ -80,18 +80,19 @@ class REPS:
 
                 action = π(φ_s, θ=self.θ, Σ=self.Σ)
                 next_state, reward, done, _ = self.env.step(action)
+                φ_s_next = self.φ_fn(next_state)
                 states.append(φ_s)
                 actions.append(action)
                 rewards.append(reward)
+                next_states.append(φ_s_next)
                 if self.render:
                     self.env.render()
                 if np.random.rand() < 1 - self.γ:
                     φ_s = self.φ_fn(self.env.reset())
                     states_0.append(φ_s)
                 else:
-                    φ_s_next = self.φ_fn(next_state)
                     φ_s = φ_s_next
-                next_states.append(φ_s)
+
                 print(f"step {step}", end="\r")
 
             ############################
