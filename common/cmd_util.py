@@ -27,6 +27,9 @@ class ArgumentParser:
         parser.add_argument('--render', action='store_true', help='render the environment')
         parser.add_argument('--experiment', action='store_true', help='whether this experiment was run via experiment.py')
 
+        parser.add_argument('--n_eval_traj', type=int, default=25,
+                            help='number of trajectories to run evaluation on, when --eval is set.')
+
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--eval', action='store_true', help='toggles evaluation mode')
         group.add_argument('--resume', action='store_true',
