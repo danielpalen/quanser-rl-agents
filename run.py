@@ -31,10 +31,12 @@ def run_single_experiment(args=None):
         defaults_path = os.path.join('hyperparameters', args.algo.lower(), f"{args.env}.yaml")
         print(defaults_path)
 
-        with open(defaults_path) as f:
-            params = yaml.load(f)['params']
-            print('DEFAULTS')
-            pprint(params)
+        params = {}
+        if os.path.exists(defaults_path):
+            with open(defaults_path) as f:
+                params = yaml.load(f)['params']
+                print('DEFAULTS')
+                pprint(params)
 
         if args.experiment:
             args.summary_path = os.path.join('out', 'experiments', '_'.join(args.name.split('_')[:-1]), 'summary', args.name)
