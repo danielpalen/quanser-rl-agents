@@ -151,25 +151,48 @@ class ACREPS:
         :return (cumulative_reward, mean_traj_reward):
         """
         total_reward, trajectory = 0, 0
-        φ_s = self.φ_fn(self.env.reset())
+        traj_rewards = []
+        traj_reward = 0
+        state = self.env.reset()
+        φ_s = self.φ_fn(state)
         step = 0
-        while trajectory < n_trajectories:
+
+        actions = []
+        states = []
+
+        while len(traj_rewards) < n_trajectories:
             step += 1
             action = π(φ_s, θ=self.θ, Σ=self.Σ, deterministic=True)
+            states.append(state)
+            actions.append(action)
             next_state, reward, done, _ = self.env.step(action)
             total_reward += reward
+            traj_reward += reward
             if self.render:
                 self.env.render()
             if done:
                 print(step)
                 step = 0
-                trajectory += 1
                 φ_s = self.φ_fn(self.env.reset())
+                trajectory += 1
+                traj_rewards.append(traj_reward)
+                traj_reward = 0
+                if print_reward:
+                    print(traj_rewards)
+                    print('total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
+                          'max', np.max(traj_rewards))
+                    #print('states', states)
+                    #print('actions', actions)
+                    print()
+                states = []
+                actions = []
             else:
+                state = next_state
                 φ_s = self.φ_fn(next_state)
         mean_traj_reward = total_reward / n_trajectories
         if print_reward:
-            print('cummulative', total_reward, 'mean', mean_traj_reward)
+            print('total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
+            print()
         return total_reward, mean_traj_reward
 
     def φ_fn(self, state):
@@ -198,7 +221,7 @@ class ACREPS:
         file = np.load(self.checkpoint_path)
         self.epoch = file['epoch']
         self.fourier_freq, self.fourier_offset = file['fourier_features']  # feature parameters
-        self.θ, self.Σ = file['θ'], file['Σ']  # policy parameters
+        self.θ, self.Σ = file['θ'], [[16.0]]  # policy parameters
         self.α, self.η = file['α'], file['η']  # dual parameters
         print(f"LOADED Model at epoch {self.epoch}")
 

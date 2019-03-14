@@ -6,9 +6,9 @@ import quanser_robots
 
 from common.cmd_util import ArgumentParser
 from common.environments import get_env_name
-from reps.reps import REPS
-from reps.acreps import ACREPS
-from ppo.ppo import PPO
+from agents.reps import REPS
+from agents.acreps import ACREPS
+from agents.ppo import PPO
 
 
 def run_single_experiment(args=None):
