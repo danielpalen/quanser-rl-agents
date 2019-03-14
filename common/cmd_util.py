@@ -20,12 +20,10 @@ class ArgumentParser:
         parser.add_argument('--env', type=str, required=True, help='name of the environment to be learned')
         parser.add_argument('--robot', action='store_true', help='run the experiment using the real robot environment')
 
-        parser.add_argument('--n_epochs', type=int, help='number of training epochs')
-        parser.add_argument('--n_steps', type=int, help='number of environment steps per epoch')
         parser.add_argument('--seed', type=int, help='seed for torch/numpy/gym to make experiments reproducible')
 
         parser.add_argument('--render', action='store_true', help='render the environment')
-        parser.add_argument('--experiment', action='store_true', help='whether this experiment was run via experiment.py')
+        parser.add_argument('--experiment', action='store_true', help='whether this experiment was run via experiments.py')
 
         parser.add_argument('--n_eval_traj', type=int, default=25,
                             help='number of trajectories to run evaluation on, when --eval is set.')
@@ -41,6 +39,8 @@ class ArgumentParser:
         #  REPS Arguments
         # ---------------------
         reps_parser = subparsers.add_parser('REPS')
+        reps_parser.add_argument('--n_epochs', type=int, help='number of training epochs')
+        reps_parser.add_argument('--n_steps', type=int, help='number of environment steps per epoch')
         reps_parser.add_argument('--epsilon', type=float, help='KL constraint.')
         reps_parser.add_argument('--gamma', type=float, help='1 minus environment reset probability.')
 
@@ -51,6 +51,8 @@ class ArgumentParser:
         #  ACREPS Arguments
         # ---------------------
         acreps_parser = subparsers.add_parser('ACREPS')
+        acreps_parser.add_argument('--n_epochs', type=int, help='number of training epochs')
+        acreps_parser.add_argument('--n_steps', type=int, help='number of environment steps per epoch')
         acreps_parser.add_argument('--epsilon', type=float, help='KL constraint.')
         acreps_parser.add_argument('--gamma', type=float, help='discount factor γ.')
 
@@ -61,6 +63,8 @@ class ArgumentParser:
         #  PPO Arguments
         # ---------------------
         ppo_parser = subparsers.add_parser('PPO')
+        ppo_parser.add_argument('--n_epochs', type=int, help='number of training epochs')
+        ppo_parser.add_argument('--n_steps', type=int, help='number of environment steps per epoch')
         ppo_parser.add_argument('--clip', type=float, help='clipping factor')
         ppo_parser.add_argument('--gamma', type=float, help='discount factor γ.')
         ppo_parser.add_argument('--gea', action='store_true', help='Use Generalized Advantage Estimation instead of '

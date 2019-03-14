@@ -28,13 +28,35 @@ The basic syntax is:
 ```
 python run.py [general arguments] (ACREPS|REPS|PPO) [algorithm specific arguments]
 ```
-More information on required and on optional commands can be explored by running `python run.py -h`.
+More information on required and on optional commands can be found by running `python run.py -h`.
 Which returns
 ```
-python run.py [-h] --name NAME --env ENV [--robot] [--n_epochs N_EPOCHS]
-              [--n_steps N_STEPS] [--seed SEED] [--render] [--experiment]
-              [--eval | --resume]
-              {REPS,ACREPS,PPO}
+usage: run.py [-h] --name NAME --env ENV [--robot] [--seed SEED] [--render]
+              [--experiment] [--n_eval_traj N_EVAL_TRAJ] [--eval | --resume]
+              {REPS,ACREPS,PPO} ...
+
+Solve the different gym environments
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --name NAME           identifier to store experiment results
+  --env ENV             name of the environment to be learned
+  --robot               run the experiment using the real robot environment
+  --seed SEED           seed for torch/numpy/gym to make experiments
+                        reproducible
+  --render              render the environment
+  --experiment          whether this experiment was run via experiments.py
+  --n_eval_traj N_EVAL_TRAJ
+                        number of trajectories to run evaluation on, when
+                        --eval is set.
+  --eval                toggles evaluation mode
+  --resume              resume training on an existing model by loading the
+                        last checkpoint
+
+subcommands:
+  Algorithms to choose from
+
+  {REPS,ACREPS,PPO}
 ```
 For information on algorithm specific commands the ``-h`` can executed on the subcommands `{ACREPS,REPS,PPO}`,
 e.g. ``python run.py REPS -h`` to get more information training the REPS algorithm.
@@ -50,12 +72,14 @@ But each of the algorithms' sub commands `(REPS|ACREPS|PPO)` can take custom hyp
 To figure out the available hyperparameters that can be set the `-h` flag can be run on the algorhtms subcommand,
 e.g. `python run.py REPS -h` returns:
 ```
-usage: run.py REPS [-h] [--epsilon EPSILON] [--gamma GAMMA]
-                   [--n_fourier N_FOURIER]
+usage: run.py REPS [-h] [--n_epochs N_EPOCHS] [--n_steps N_STEPS]
+                   [--epsilon EPSILON] [--gamma GAMMA] [--n_fourier N_FOURIER]
                    [--fourier_band FOURIER_BAND [FOURIER_BAND ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
+  --n_epochs N_EPOCHS   number of training epochs
+  --n_steps N_STEPS     number of environment steps per epoch
   --epsilon EPSILON     KL constraint.
   --gamma GAMMA         1 minus environment reset probability.
   --n_fourier N_FOURIER
@@ -69,12 +93,33 @@ python run.py --name reps_pendulum --env pendulum REPS --gamma 0.9 --n_fourier 2
 ```
 
 #### Resume Training
-Experiments can be stopped during the training process and resumed afterwards by using the `--resume` flag.
-TODO: more explaination
+Experiments can be stopped during the training process and resumed afterwards by using the `--resume` flag. \
+NOTE: `--resume` only loads the checkpoint and does not load previsouly used hyperparameters! You have to supply these youself.
+So to resume the previous example just run
+```
+python run.py --name reps_pendulum --env pendulum --resume REPS --gamma 0.9 --n_fourier 200
+```
+NOTE: If the run stopped by itself, because the maximum number of epochs was reached it will not
+start again because the termination criterion has been met. In order to continue training
+you have to supply a `--n_epochs` with a higher number of epochs than what has already been trained.
 
 #### Evaluating Experiments
 Trained Models can be evaluated using the `--eval` flag.
-TODO: more explaination
+For evaluation the deterministic policy of the trained model is evaluated for a number of
+trajectories which can be adjusted using the `--n_eval_traj` flag.
+
+Evaluation returns the mean trajectory reward, its standard deviation and the maximum trajectory reward.
+Evaluating the previsouly trained REPS model on 100 trajectories can be done by running:
+```
+python run.py --name reps_pendulum --env pendulum --eval --n_eval_traj 100 REPS
+```
+
+#### Running on the Real Robot
+To set up the real robot one has to follow the instructions in the `https://git.ias.informatik.tu-darmstadt.de/quanser/clients`
+repository.
+Furthermore, in our code the `--robot` flag has to be supplied in order to select the
+real robot environment variant of the gym environment.
+Everything else remains the same no matter whether you run in simulation or on the real system.
 
 #### Visualising Training with TensorBoard
 Different scalar values that occure during the training process are saved into tensorboard files automatically.
