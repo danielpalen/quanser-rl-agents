@@ -145,7 +145,9 @@ and then activate it by executing
 
 ```conda activate rl-env```
 
-**IMPORTANT: When not using a virtual environment, use *pip3* instead of *pip* in the instructions below.**
+Now install the required packages with
+
+```pip install -r requirements.txt```
 
 ### Quanser Robots
 Install the modified OpenAI gym environments by first cloning the git repository
@@ -158,38 +160,3 @@ and then install by executing
 cd clients
 pip install -e .
 ```
-
-### Pytorch framework
-As we used the pytorch framework (<https://pytorch.org/#pip-install-pytorch>) install the appropriate version:
-
-For mac:
-
-```pip install torch torchvision```
-
-For Linux (non-gpu version):
-
-```
-pip install https://download.pytorch.org/whl/cpu/torch-1.0.0-cp36-cp36m-linux_x86_64.whl
-pip install torchvision
-```
-
-### Tensorflow and TensorboardX
-
-In order to install tensorflow (non-gpu version), execute:
-
-```pip install tensorflow```
-
-For evaluation and visualization of the learning, install tensorboardX, which is a tensorboard port for Pytorch:
-
-```pip install tensorboardX```
-
-### Other requirements
-- joblib
-- yaml
-- ...
-
-### Installing the learning algorithms
-
-```git clone https://github.com/danielpalen/rl-research-lab-class.git```
-
-Now you are all set to train a model or evaluate an algorithm.
