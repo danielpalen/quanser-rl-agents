@@ -6,12 +6,12 @@ The algorihtms implemented are:
 - [Actor-Critic Relative Entropy Policy Search (ACREPS)](https://www.aaai.org/ocs/index.php/AAAI/AAAI16/paper/view/12247)
 - [Proximal Policy Optimization (PPO)](https://arxiv.org/abs/1707.06347)
 
-In practice they were only tested on the following environments: \
+In practice, they were only tested on the following environments: \
 `Pendulum Swingup`, `Double Cartpole`, `Furuta Pendulum`, `Ball Ballancer` \
 The last three are custom gym environments implemented in the quansar_robots repository.
 
 ## Repository Contents
-1. `run.py` main entry point for all training and evaluation tasks.
+1. `run.py` the main entry point for all training and evaluation tasks.
 2. `experiments.py` convenience method to run multiple experiments with the same settings in parallel processes.
 3. `requirements.txt` contains the requirements (except for `quanser_robots` which needs to be installed manually)
 4. `/agents`
@@ -59,7 +59,7 @@ subcommands:
 
   {REPS,ACREPS,PPO}
 ```
-For information on algorithm specific commands the ``-h`` can executed on the subcommands `{ACREPS,REPS,PPO}`,
+For information on algorithm specific commands the ``-h`` can be executed on the subcommands `{ACREPS,REPS,PPO}`,
 e.g. ``python run.py REPS -h`` to get more information training the REPS algorithm.
 
 The most basic command for running REPS on the underactuated pendulum swingup would be
@@ -69,7 +69,7 @@ python run.py --name reps_pendulum --env pendulum REPS
 
 #### Training with Custom Hyperparameter Settings
 By default a default set of hyperparameters is loaded from `hyperparameters/[algorithm]/[environoment].yaml`.
-But each of the algorithms' sub commands `(REPS|ACREPS|PPO)` can take custom hyperparameter commands.
+However, each of the algorithms' subcommands `(REPS|ACREPS|PPO)` can take custom hyperparameter commands.
 To figure out the available hyperparameters that can be set the `-h` flag can be run on the algorithms subcommand,
 e.g. `python run.py REPS -h` returns:
 ```
@@ -88,29 +88,29 @@ optional arguments:
   --fourier_band FOURIER_BAND [FOURIER_BAND ...]
                         number of fourier features.
 ```
-Training REPS on the pendulum with a custom gamma and more fourier features is as easy as
+Training REPS on the pendulum with a custom gamma and more Fourier features is as easy as
 ```
 python run.py --name reps_pendulum --env pendulum REPS --gamma 0.9 --n_fourier 200
 ```
 
 #### Resume Training
 Experiments can be stopped during the training process and resumed afterwards by using the `--resume` flag. \
-NOTE: `--resume` only loads the checkpoint and does not load previsouly used hyperparameters! You have to supply these youself.
+NOTE: `--resume` only loads the checkpoint and does not load previously used hyperparameters! You have to supply these yourself.
 So to resume the previous example just run
 ```
 python run.py --name reps_pendulum --env pendulum --resume REPS --gamma 0.9 --n_fourier 200
 ```
 NOTE: If the run stopped by itself, because the maximum number of epochs was reached it will not
-start again because the termination criterion has been met. In order to continue training
+start again because the termination criterion has been met. To continue training
 you have to supply a `--n_epochs` with a higher number of epochs than what has already been trained.
 
 #### Evaluating Experiments
 Trained Models can be evaluated using the `--eval` flag.
-For evaluation the deterministic policy of the trained model is evaluated for a number of
+For evaluation, the deterministic policy of the trained model is evaluated for a number of
 trajectories which can be adjusted using the `--n_eval_traj` flag.
 
 Evaluation returns the mean trajectory reward, its standard deviation and the maximum trajectory reward.
-Evaluating the previsouly trained REPS model on 100 trajectories can be done by running:
+Evaluating the previously trained REPS model on 100 trajectories can be done by running:
 ```
 python run.py --name reps_pendulum --env pendulum --eval --n_eval_traj 100 REPS
 ```
@@ -118,16 +118,16 @@ python run.py --name reps_pendulum --env pendulum --eval --n_eval_traj 100 REPS
 #### Running on the Real Robot
 To set up the real robot one has to follow the instructions in the `https://git.ias.informatik.tu-darmstadt.de/quanser/clients`
 repository.
-Furthermore, in our code the `--robot` flag has to be supplied in order to select the
+Furthermore, in our code, the `--robot` flag has to be supplied to select the
 real robot environment variant of the gym environment.
 Everything else remains the same no matter whether you run in simulation or on the real system.
 
 #### Visualising Training with TensorBoard
-Different scalar values that occure during the training process are saved into tensorboard files automatically.
+Different scalar values that occur during the training process are saved into tensorboard files automatically.
 These files are either located in `out/summary/[experiment_name]` or in `out/experiments/[experiment_name]/summary`
-depending on whether the experiment was invoced via `run.py` or `experiments.py`. Usually however experiemnts will
+depending on whether the experiment was invoked via `run.py` or `experiments.py`. Usually, however, experiments will
 be located in the first of both locations.
-To start a tensorboard that loads all experiments invoced via `run.py` just execute:
+To start a tensorboard that loads all experiments invoked via `run.py` just execute:
 ```
 tensorboard --logdir=out/summary
 ```
@@ -138,11 +138,11 @@ Dependencies are listed in `requirements.txt`.
 An additional requirement is the `quanser_robots` package [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients).
 
 We suggest running everything from within a conda environment.
-The following sections are going to address the installation process in a conder environment.
+The following sections are going to address the installation process in a conda environment.
 
 ### Conda Environment
 
-In order to manage the different python versions we use conda for creating virtual environments.
+To manage the different python versions, we use conda for creating virtual environments.
 Install mini conda from [https://conda.io/en/latest/miniconda.html>](https://conda.io/en/latest/miniconda.html).
 Next, run the following commands to create an empty environment with the name `rl-env`
 and install the required dependencies.
@@ -153,7 +153,7 @@ pip install -r requirements.txt
 ```
 
 #### Quanser Robots
-Install the custom Quanser OpenAI gym environments by
+Install the custom OpenAI gym environments by
 following the installation instructions in the `quanser_robots` repository
 located at [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients) \
 WARNING: It is important, that the conda environment is activated during the installation
