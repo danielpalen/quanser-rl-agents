@@ -1,5 +1,6 @@
 # REPS - pendulum
 params:
+  n_epochs: 30
   n_steps: 3000
 
   gamma: 0.99

@@ -1,6 +1,6 @@
 # ACREPS - double_pendulum
 params:
-  n_epochs: 50
+  n_epochs: 400
   n_steps: 3000
 
   gamma: 0.99

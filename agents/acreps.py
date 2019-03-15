@@ -160,6 +160,8 @@ class ACREPS:
         actions = []
         states = []
 
+        print('Evaluating the deterministic policy...')
+
         while len(traj_rewards) < n_trajectories:
             step += 1
             action = π(φ_s, θ=self.θ, Σ=self.Σ, deterministic=True)
@@ -171,19 +173,19 @@ class ACREPS:
             if self.render:
                 self.env.render()
             if done:
-                print(step)
+                # print(step)
                 step = 0
                 φ_s = self.φ_fn(self.env.reset())
                 trajectory += 1
                 traj_rewards.append(traj_reward)
                 traj_reward = 0
                 if print_reward:
-                    print(traj_rewards)
+                    # print(traj_rewards)
                     print('total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
                           'max', np.max(traj_rewards))
                     #print('states', states)
                     #print('actions', actions)
-                    print()
+                    # print()
                 states = []
                 actions = []
             else:

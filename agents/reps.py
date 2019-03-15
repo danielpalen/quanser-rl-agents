@@ -155,6 +155,9 @@ class REPS:
         total_reward, trajectory = 0, 0
         φ_s = self.φ_fn(self.env.reset())
         step = 0
+
+        print('Evaluating the deterministic policy...')
+
         while trajectory < n_trajectories:
             step += 1
             action = π(φ_s, θ=self.θ, Σ=self.Σ, deterministic=True)
@@ -163,7 +166,7 @@ class REPS:
             if self.render:
                 self.env.render()
             if done:
-                print(step)
+                # print(step)
                 step = 0
                 trajectory += 1
                 φ_s = self.φ_fn(self.env.reset())

@@ -213,6 +213,8 @@ class PPO:
         actions = []
         states = []
 
+        print('Evaluating the deterministic policy...')
+
         while len(traj_rewards) < n_trajectories:
             step += 1
             action, _, _ = self.policy.select_action(state, deterministic=True)
@@ -225,19 +227,19 @@ class PPO:
                 self.env.render()
             # state = next_state
             if done:
-                print(step)
+                # print(step)
                 step = 0
                 state = self.env.reset()
                 trajectory += 1
                 traj_rewards.append(traj_reward)
                 traj_reward = 0
                 if print_reward:
-                    print(traj_rewards)
+                    # print(traj_rewards)
                     print('total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
                           'max', np.max(traj_rewards))
-                    #print('states', states)
-                    #print('actions', actions)
-                    print()
+                    # print('states', states)
+                    # print('actions', actions)
+                    # print()
                 states = []
                 actions = []
             else:

@@ -1,4 +1,4 @@
-# PPO - furuta
+# PPO - double_pendulum
 params:
   n_epochs: 400
   n_steps: 3000
@@ -6,8 +6,8 @@ params:
   gamma: 0.9
   p_lr: 7.e-4
   v_lr: 7.e-4
-  n_mb_epochs: 10
-  mb_size: 128
+  n_mb_epochs: 5
+  mb_size: 64
   clip: 0.2
 
   gae: False

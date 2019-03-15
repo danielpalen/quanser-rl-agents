@@ -1,12 +1,11 @@
+# ACREPS - balancer
 params:
-  algo: ACREPS
-  env: balancer
-  n_experiments: 25
-  n_parallel: 7
-  name: acrepsg099bb
-  fourier_band: [0.0001, 0.0001, 0.0001, 0.0001 , 1000000, 1000000, 1000000, 100000]
-  n_fourier: 400
+  n_epochs: 400
   n_steps: 6000
+
   gamma: 0.99
-  sigma: 40
-  
+  epsilon: 0.1
+  sigma: 40.0
+
+  n_fourier: 400
+  fourier_band: [0.75, 0.75, 0.075, 0.0075 , 6, 6, 0.25, 0.25]
