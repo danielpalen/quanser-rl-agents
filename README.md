@@ -155,6 +155,6 @@ pip install -r requirements.txt
 #### Quanser Robots
 Install the custom Quanser OpenAI gym environments by
 following the installation instructions in the `quanser_robots` repository
-located at [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients)
+located at [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients) \
 WARNING: It is important, that the conda environment is activated during the installation
 of the `quansr_robots`.
