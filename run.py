@@ -34,7 +34,7 @@ def run_single_experiment(args=None):
         params = {}
         if os.path.exists(defaults_path):
             with open(defaults_path) as f:
-                params = yaml.load(f)['params']
+                params = yaml.load(f, Loader=yaml.FullLoader)['params']
                 print('DEFAULTS')
                 pprint(params)
 

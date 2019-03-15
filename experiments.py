@@ -51,7 +51,7 @@ def main():
                   "containing the experiments hyperparameters. The folder structure has already been created for you")
     else:
         with open(parameters_path) as f:
-            parameters = yaml.load(f)['params']
+            parameters = yaml.load(f, Loader=yaml.FullLoader)['params']
 
             def run_exp(i):
                 args = parameters.copy()
