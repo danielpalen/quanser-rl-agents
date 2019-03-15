@@ -60,17 +60,17 @@ subcommands:
   {REPS,ACREPS,PPO}
 ```
 For information on algorithm specific commands the ``-h`` can be executed on the subcommands `{ACREPS,REPS,PPO}`,
-e.g. ``python run.py REPS -h`` to get more information training the REPS algorithm.
+e.g. ``python run.py REPS -h`` to get more information on training the REPS algorithm.
 
-The most basic command for running REPS on the underactuated pendulum swingup would be
+The most basic command for training REPS on the underactuated pendulum swingup would be
 ```
 python run.py --name reps_pendulum --env pendulum REPS
 ```
 
 #### Training with Custom Hyperparameter Settings
 By default a default set of hyperparameters is loaded from `hyperparameters/[algorithm]/[environoment].yaml`.
-However, each of the algorithms' subcommands `(REPS|ACREPS|PPO)` can take custom hyperparameter commands.
-To figure out the available hyperparameters that can be set the `-h` flag can be run on the algorithms subcommand,
+However, each of the algorithms' subcommands `(REPS|ACREPS|PPO)` can take custom hyperparameters in the form of command line arguments.
+To figure out the available hyperparameters that can be set (for a specific algorithm) the `-h` flag can be run on the algorithm's subcommand,
 e.g. `python run.py REPS -h` returns:
 ```
 usage: run.py REPS [-h] [--n_epochs N_EPOCHS] [--n_steps N_STEPS]
