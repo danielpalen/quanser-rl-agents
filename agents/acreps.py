@@ -181,7 +181,7 @@ class ACREPS:
                 traj_reward = 0
                 if print_reward:
                     # print(traj_rewards)
-                    print('total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
+                    print(len(traj_rewards), 'trajectories: total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
                           'max', np.max(traj_rewards))
                     #print('states', states)
                     #print('actions', actions)
@@ -193,7 +193,7 @@ class ACREPS:
                 φ_s = self.φ_fn(next_state)
         mean_traj_reward = total_reward / n_trajectories
         if print_reward:
-            print('total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
+            print('FINAL: total', total_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
             print()
         return total_reward, mean_traj_reward
 

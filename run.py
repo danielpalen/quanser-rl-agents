@@ -35,8 +35,8 @@ def run_single_experiment(args=None):
         if os.path.exists(defaults_path):
             with open(defaults_path) as f:
                 params = yaml.load(f, Loader=yaml.FullLoader)['params']
-                print('DEFAULTS')
-                pprint(params)
+                #print('DEFAULTS')
+                #pprint(params)
 
         if args.experiment:
             args.summary_path = os.path.join('out', 'experiments', '_'.join(args.name.split('_')[:-1]), 'summary', args.name)

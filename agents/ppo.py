@@ -235,7 +235,7 @@ class PPO:
                 traj_reward = 0
                 if print_reward:
                     # print(traj_rewards)
-                    print('total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
+                    print(len(traj_rewards), 'trajectories: total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards),
                           'max', np.max(traj_rewards))
                     # print('states', states)
                     # print('actions', actions)
@@ -246,7 +246,7 @@ class PPO:
                 state = next_state
         mean_traj_reward = cumulative_reward / n_trajectories
         if print_reward:
-            print('total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
+            print('FINAL: total', cumulative_reward, 'mean', np.mean(traj_rewards), 'std', np.std(traj_rewards), 'max', np.max(traj_rewards))
             print()
 
         return cumulative_reward, mean_traj_reward

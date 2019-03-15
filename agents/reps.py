@@ -174,7 +174,7 @@ class REPS:
                 φ_s = self.φ_fn(next_state)
         mean_traj_reward = total_reward / n_trajectories
         if print_reward:
-            print('cummulative', total_reward, 'mean', mean_traj_reward)
+            print('FINAL: total', total_reward, 'mean', mean_traj_reward)
         return total_reward, mean_traj_reward
 
     def φ_fn(self, state):
