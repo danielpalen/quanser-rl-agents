@@ -134,27 +134,19 @@ tensorboard --logdir=out/summary
 
 ## Installation
 This code was tested with `python 3.6.5`. 
-Dependencies are listed in `requirements.txt`.
-An additional requirement is the `quanser_robots` package [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients).
+All dependencies are listed in `requirements.txt`.
 
 We suggest running everything from within a conda environment.
 The following sections are going to address the installation process in a conda environment.
 
 ### Conda Environment
-
 To manage the different python versions, we use conda for creating virtual environments.
-Install mini conda from [https://conda.io/en/latest/miniconda.html>](https://conda.io/en/latest/miniconda.html).
+Install mini conda from [https://conda.io/en/latest/miniconda.html](https://conda.io/en/latest/miniconda.html).
 Next, run the following commands to create an empty environment with the name `rl-env`
-and install the required dependencies.
+and install all required dependencies within that environment.
 ```
 conda create --name rl-env python=3.6.5
 conda activate rl-env
 pip install -r requirements.txt
 ```
-
-#### Quanser Robots
-Install the custom OpenAI gym environments by
-following the installation instructions in the `quanser_robots` repository
-located at [https://git.ias.informatik.tu-darmstadt.de/quanser/clients](https://git.ias.informatik.tu-darmstadt.de/quanser/clients) \
-WARNING: It is important, that the conda environment is activated during the installation
-of the `quansr_robots`.
+Now you can run our code!
